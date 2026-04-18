@@ -11,12 +11,12 @@ try:
 except ImportError:
     pass
 
-# إعداد الصفحة لإزالة أي هوامش علوية
+# إعداد الصفحة لإزالة أي زوائد برمجية أو خطوط
 st.set_page_config(page_title="ساعة الصلاة - aale1164", layout="wide")
 
 sa_tz = pytz.timezone('Asia/Riyadh')
 
-# --- التصميم الجديد: بدون منبه وبتوزيع متناسق ---
+# --- التصميم: تم حذف المنبه وترتيب المعلومات تحت بعضها مباشرة ---
 st.markdown("""
 <style>
     header, footer, .stDeployButton, #MainMenu { visibility: hidden !important; height: 0; }
@@ -36,41 +36,51 @@ st.markdown("""
         align-items: center;
         height: 100vh;
         justify-content: flex-start;
-        padding-top: 5vh;
+        padding-top: 6vh; /* رفع المحتوى قليلاً ليتناسب مع موقع القمر */
     }
 
-    /* ستايل النصوص الموحد (أبيض بظل شفاف) */
     .unified-text {
         color: #FFFFFF !important;
-        text-shadow: 2px 2px 10px rgba(0,0,0,0.5); 
+        text-shadow: 2px 2px 10px rgba(0,0,0,0.6); 
         margin: 0;
         line-height: 1.2;
         text-align: center;
     }
 
-    /* الساعة في الأعلى */
-    .time-main { font-size: 15vw; font-weight: 900; }
-    .ampm-mini { font-size: 5vw; margin-right: 10px; }
+    /* الساعة */
+    .time-display { font-size: 16vw; font-weight: 900; }
+    .ampm-display { font-size: 5vw; margin-right: 10px; }
 
-    /* التاريخ والمتبقي على الصلاة بنفس الحجم تحت بعض */
-    .sub-info { font-size: 4.5vw; font-weight: 700; margin-top: 5px; }
+    /* التاريخ والمتبقي (نفس الحجم والنمط) */
+    .info-line { font-size: 4.8vw; font-weight: 700; margin-top: 8px; }
 
-    .social-footer { margin-top: auto; padding-bottom: 20px; }
+    /* حسابات التواصل الاجتماعي في الأسفل */
+    .social-footer { 
+        margin-top: auto; 
+        padding-bottom: 30px; 
+        display: flex;
+        gap: 15px;
+    }
     .social-footer a {
-        color: white !important; text-decoration: none; font-size: 14px;
-        padding: 8px 18px; background: rgba(0,0,0,0.3); border-radius: 20px;
-        margin: 5px; border: 1px solid rgba(255,255,255,0.1);
+        color: white !important; 
+        text-decoration: none; 
+        font-size: 4vw; 
+        font-weight: bold;
+        padding: 10px 20px; 
+        background: rgba(0,0,0,0.4); 
+        border-radius: 50px;
+        border: 1px solid rgba(255,255,255,0.2);
     }
 </style>
 """, unsafe_allow_html=True)
 
-# جلب الموقع
+# جلب الموقع الجغرافي
 location = get_geolocation()
-lat, lon = 26.32, 43.97
+lat, lon = 26.32, 43.97 # إحداثيات افتراضية في حال لم يتوفر الموقع
 if location and 'coords' in location:
     lat, lon = location['coords']['latitude'], location['coords']['longitude']
 
-# حاوية العرض الرئيسية
+# حاوية العرض الرئيسية (لا تحتوي على أزرار أو منبهات)
 placeholder = st.empty()
 
 while True:
@@ -102,11 +112,12 @@ while True:
         if raw_t.startswith('0'): raw_t = raw_t[1:]
         ampm = now.strftime('%p')
 
+        # واجهة نظيفة تماماً من أي أكواد أو أزرار زائدة
         st.markdown(f"""
             <div class='main-layout'>
-                <div class='unified-text time-main'>{raw_t}<span class='ampm-mini'>{ampm}</span></div>
-                <div class='unified-text sub-info'>{hij_str} | {mil_str}</div>
-                <div class='unified-text sub-info'>متبقي على صلاة {next_p_name}: {time_left}</div>
+                <div class='unified-text time-display'>{raw_t}<span class='ampm-display'>{ampm}</span></div>
+                <div class='unified-text info-line'>{hij_str} | {mil_str}</div>
+                <div class='unified-text info-line'>متبقي على صلاة {next_p_name}: {time_left}</div>
 
                 <div class='social-footer'>
                     <a href='https://twitter.com/aale1164' target='_blank'>𝕏 @aale1164</a>
