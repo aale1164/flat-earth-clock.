@@ -1,11 +1,11 @@
 import streamlit as st
 import pytz
-from datetime import datetime, timedelta
+from datetime import datetime
 import time
 from hijri_converter import Gregorian
 from streamlit_js_eval import get_geolocation
 
-# استيراد مكتبة الصلاة
+# استيراد مكتبة الصلاة بأمان
 try:
     from prayer_times_calculator import PrayerTimesCalculator
 except:
@@ -18,10 +18,11 @@ sa_tz = pytz.timezone('Asia/Riyadh')
 
 # طلب الموقع الجغرافي
 location = get_geolocation()
-lat, lon = 26.32, 43.97 # القصيم افتراضياً
+# إحداثيات افتراضية (القصيم) في حال لم يتوفر الموقع بعد
+lat, lon = 26.32, 43.97 
 location_name = "القصيم"
 
-if location:
+if location and 'coords' in location:
     lat = location['coords']['latitude']
     lon = location['coords']['longitude']
     location_name = "موقعك الحالي"
@@ -37,10 +38,10 @@ st.markdown(f"""
     }}
     .prayer-card {{
         text-align: center; background: rgba(0,255,0,0.1); padding: 20px;
-        border-radius: 15px; border: 2px solid #00FF00; margin-top: 30px;
+        border-radius: 15px; border: 2px solid #00FF00; margin-top: 20px;
     }}
-    .countdown {{ font-size: 40px; color: #00FF00; font-weight: bold; }}
-    .date-text {{ font-size: 20px; color: #FFA500; font-weight: bold; text-align: center; }}
+    .countdown {{ font-size: 45px; color: #00FF00; font-weight: bold; font-family: 'Courier New', monospace; }}
+    .date-text {{ font-size: 22px; color: #FFA500; font-weight: bold; text-align: center; margin-top: 10px; }}
 </style>
 """, unsafe_allow_html=True)
 
@@ -51,11 +52,10 @@ while True:
     h = Gregorian(now.year, now.month, now.day).to_hijri()
     
     # تنسيق التاريخ أرقام فقط
-    hijri_date = f"{h.day} / {h.month} / {h.year} هـ"
-    miladi_date = f"{now.day} / {now.month} / {now.year} م"
+    hijri_date = f"{h.day}/{h.month}/{h.year} هـ"
+    miladi_date = f"{now.day}/{now.month}/{now.year} م"
     
     # حساب مواقيت الصلاة
-    prayers = None
     next_prayer_name = ""
     time_diff_str = ""
     
@@ -64,21 +64,22 @@ while True:
         prayers = calc.fetch_prayer_times()
         
         if prayers:
-            p_times = {
-                'الفجر': prayers['Fajr'],
-                'الظهر': prayers['Dhuhr'],
-                'العصر': prayers['Asr'],
-                'المغرب': prayers['Maghrib'],
-                'العشاء': prayers['Isha']
-            }
+            p_times = [
+                ('الفجر', prayers['Fajr']),
+                ('الظهر', prayers['Dhuhr']),
+                ('العصر', prayers['Asr']),
+                ('المغرب', prayers['Maghrib']),
+                ('العشاء', prayers['Isha'])
+            ]
             
-            current_time_str = now.strftime("%H:%M")
+            current_time_str = now.strftime("%H:%M:%S")
             found = False
-            for name, p_time in p_times.items():
-                if p_time > current_time_str:
+            for name, p_time in p_times:
+                # إضافة الثواني للتوقيت للمقارنة الدقيقة
+                full_p_time = f"{p_time}:00"
+                if full_p_time > current_time_str:
                     next_prayer_name = name
-                    # حساب المتبقي
-                    target = datetime.strptime(p_time, "%H:%M").replace(year=now.year, month=now.month, day=now.day)
+                    target = datetime.strptime(full_p_time, "%H:%M:%S").replace(year=now.year, month=now.month, day=now.day)
                     target = sa_tz.localize(target)
                     diff = target - now
                     
@@ -88,18 +89,15 @@ while True:
                     found = True
                     break
             
-            if not found: # إذا انتهت صلوات اليوم، الصلاة القادمة هي فجر الغد
+            if not found:
                 next_prayer_name = "الفجر"
-                time_diff_str = "--:--:--"
-    except:
-        pass
+                time_diff_str = "صلاة الغد"
+    except Exception as e:
+        time_diff_str = "جاري الحساب..."
 
     with placeholder.container():
-        # الساعة 12 ساعة
+        # الساعة
         time_str = now.strftime('%I:%M:%S %p').replace('AM','صباحاً').replace('PM','مساءً')
         if time_str.startswith('0'): time_str = time_str[1:]
 
-        st.markdown(f"<h1 style='text-align:center; color:#fff; font-size:70px; margin-bottom:10px;'>{time_str}</h1>", unsafe_allow_html=True)
-        
-        # التاريخ أرقام
-        st.markdown(f"<p class='date-text'>{hijri_date} &nbsp; | &nbsp; {miladi_date}</p>", unsafe_allow_html=True)
+        st.markdown(f"<h1 style='text-align:center; color:#fff; font-size:80px; margin-bottom:0;'>{time_str}</h1>", unsafe_allow_html=True)
