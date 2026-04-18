@@ -5,21 +5,20 @@ import time
 from hijri_converter import Gregorian
 from streamlit_js_eval import get_geolocation
 
-# استيراد مكتبة أوقات الصلاة بأمان
+# استيراد المكتبة بأمان
 try:
     from prayer_times_calculator import PrayerTimesCalculator
 except ImportError:
     pass
 
-# إعداد الصفحة لإخفاء كل الزوائد
+# إعداد الصفحة لإخفاء كافة العناصر الزائدة
 st.set_page_config(page_title="ساعة الصلاة - aale1164", layout="wide")
 
 sa_tz = pytz.timezone('Asia/Riyadh')
 
-# --- التصميم: واجهة نقية 100% ---
+# --- التصميم: واجهة نقية مع إزاحة ذكية للأسفل ---
 st.markdown("""
 <style>
-    /* إخفاء تام للعناصر العلوية والسفلية والخطوط */
     header, footer, .stDeployButton, #MainMenu { visibility: hidden !important; height: 0; }
     .block-container { padding: 0 !important; }
 
@@ -37,10 +36,10 @@ st.markdown("""
         align-items: center;
         height: 100vh;
         justify-content: flex-start;
-        padding-top: 6vh; /* لتكون الساعة فوق القمر */
+        padding-top: 5vh; /* وضع الساعة فوق القمر */
     }
 
-    /* ستايل النصوص: أبيض بظل مائي شفاف */
+    /* ستايل النصوص الموحد */
     .unified-text {
         color: #FFFFFF !important;
         text-shadow: 2px 2px 10px rgba(0,0,0,0.6); 
@@ -53,13 +52,20 @@ st.markdown("""
     .time-display { font-size: 16vw; font-weight: 900; }
     .ampm-display { font-size: 5vw; margin-right: 10px; }
 
-    /* المعلومات الإضافية */
-    .info-line { font-size: 4.8vw; font-weight: 700; margin-top: 8px; }
+    /* التاريخ */
+    .date-line { font-size: 4.8vw; font-weight: 700; margin-top: 5px; }
+
+    /* متبقي على الصلاة: إزاحة إضافية للأسفل لتجنب الشمس */
+    .prayer-line { 
+        font-size: 4.8vw; 
+        font-weight: 700; 
+        margin-top: 45vh; /* إزاحة كبيرة لضمان النزول تحت منطقة الشمس */
+    }
 
 </style>
 """, unsafe_allow_html=True)
 
-# جلب الموقع الجغرافي
+# جلب الموقع
 location = get_geolocation()
 lat, lon = 26.32, 43.97 
 if location and 'coords' in location:
@@ -78,32 +84,4 @@ while True:
         calc = PrayerTimesCalculator(latitude=lat, longitude=lon, calculation_method='makkah', date=now.strftime("%Y-%m-%d"))
         times = calc.fetch_prayer_times()
         if times:
-            # السطر الذي كان يحتوي على الخطأ تم إصلاحه هنا بالكامل
-            p_list = [('الفجر', times['Fajr']), ('الظهر', times['Dhuhr']), ('العصر', times['Asr']), ('المغرب', times['Maghrib']), ('العشاء', times['Isha'])]
-            curr_f = now.strftime("%H:%M:%S")
-            for name, p_t in p_list:
-                p_f = f"{p_t}:00"
-                if p_f > curr_f:
-                    next_p_name = name
-                    target = sa_tz.localize(datetime.strptime(p_f, "%H:%M:%S").replace(year=now.year, month=now.month, day=now.day))
-                    diff = target - now
-                    h_v, rem = divmod(diff.seconds, 3600); m_v, s_v = divmod(rem, 60)
-                    time_left = f"{h_v:02d}:{m_v:02d}:{s_v:02d}"
-                    break
-    except Exception as e:
-        pass
-
-    with placeholder.container():
-        raw_t = now.strftime('%I:%M:%S')
-        if raw_t.startswith('0'): raw_t = raw_t[1:]
-        ampm = now.strftime('%p')
-
-        st.markdown(f"""
-            <div class='main-layout'>
-                <div class='unified-text time-display'>{raw_t}<span class='ampm-display'>{ampm}</span></div>
-                <div class='unified-text info-line'>{hij_str} | {mil_str}</div>
-                <div class='unified-text info-line'>متبقي على صلاة {next_p_name}: {time_left}</div>
-            </div>
-        """, unsafe_allow_html=True)
-
-    time.sleep(1)
+            p_list = [('الفجر', times['Fajr']), ('الظهر', times['Dhuhr']), ('العصر', times['Asr']),
