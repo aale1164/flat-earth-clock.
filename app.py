@@ -5,7 +5,7 @@ import time
 from hijri_converter import Gregorian
 from streamlit_js_eval import get_geolocation
 
-# استيراد مكتبة الصلاة بأمان
+# استيراد المكتبة بأمان
 try:
     from prayer_times_calculator import PrayerTimesCalculator
 except:
@@ -16,7 +16,7 @@ st.set_page_config(page_title="ساعة الصلاة - aale1164", layout="center
 sa_tz = pytz.timezone('Asia/Riyadh')
 ADHAN_URL = "https://download.tvquran.com/download/Adhan/TVQuran.com_Adhan_1.mp3"
 
-# --- تصميم ملكي: شفافية للساعة ووضوح تام ---
+# --- تصميم ملكي: شفافية عالية للساعة ---
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@700;900&display=swap');
@@ -29,20 +29,19 @@ st.markdown("""
     }
 
     .glass-panel {
-        background: rgba(0, 0, 0, 0.45); /* زيادة الشفافية للخلفية */
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: rgba(0, 0, 0, 0.4); /* شفافية عالية للخلفية السوداء */
         border-radius: 35px;
         padding: 25px;
         text-align: center;
         margin: 10px auto;
-        backdrop-filter: blur(5px); /* تأثير زجاجي ناعم */
+        backdrop-filter: blur(4px); /* تمويه بسيط لزيادة الجمالية */
     }
 
     .time-display { 
         font-size: 19vw; font-weight: 900; 
-        color: rgba(255, 255, 255, 0.85); /* ساعة شفافة وأنيقة */
+        color: rgba(255, 255, 255, 0.8); /* ساعة شفافة منسجمة مع النجوم */
         line-height: 1; margin: 0; 
-        text-shadow: 2px 2px 10px rgba(0,0,0,0.5);
+        text-shadow: 2px 2px 8px rgba(0,0,0,0.4);
     }
     
     .ampm-label { font-size: 7vw; color: #00FF00; font-weight: bold; }
@@ -64,7 +63,7 @@ st.markdown("""
     .footer-links { margin-top: 30px; text-align:center; }
     .footer-links a { 
         color: white !important; text-decoration: none; 
-        padding: 8px 15px; background: rgba(255,255,255,0.1); 
+        padding: 8px 15px; background: rgba(255,255,255,0.15); 
         border-radius: 12px; font-size: 14px; margin: 0 5px;
     }
 </style>
@@ -82,6 +81,22 @@ while True:
     now = datetime.now(sa_tz)
     h = Gregorian(now.year, now.month, now.day).to_hijri()
     
-    # إصلاح الأسطر المنقطعة
-    hij_dt = f"{h.day}/{h.month}/{h.year} هـ"
-    mil_dt = f"{now
+    # كتابة التواريخ بأسطر قصيرة لتجنب خطأ الانقطاع
+    d_hij = f"{h.day}/{h.month}/{h.year} هـ"
+    d_mil = f"{now.day}/{now.month}/{now.year} م"
+    
+    next_p, rem_t, adhan_trigger = "الفجر", "00:00:00", False
+    
+    try:
+        calc = PrayerTimesCalculator(latitude=lat, longitude=lon, calculation_method='makkah', date=now.strftime("%Y-%m-%d"))
+        times = calc.fetch_prayer_times()
+        if times:
+            plist = [('الفجر', times['Fajr']), ('الظهر', times['Dhuhr']), ('العصر', times['Asr']), ('المغرب', times['Maghrib']), ('العشاء', times['Isha'])]
+            curr = now.strftime("%H:%M:%S")
+            for name, ptime in plist:
+                pt_full = f"{ptime}:00"
+                if pt_full > curr:
+                    next_p = name
+                    target = sa_tz.localize(datetime.strptime(pt_full, "%H:%M:%S").replace(year=now.year, month=now.month, day=now.day))
+                    diff = target - now
+                    hh, rr = divmod(diff.seconds,
