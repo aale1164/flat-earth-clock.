@@ -5,7 +5,7 @@ import time
 from hijri_converter import Gregorian
 from streamlit_js_eval import get_geolocation
 
-# استيراد مكتبة أوقات الصلاة
+# استيراد مكتبة أوقات الصلاة بأمان
 try:
     from prayer_times_calculator import PrayerTimesCalculator
 except ImportError:
@@ -78,4 +78,32 @@ while True:
         calc = PrayerTimesCalculator(latitude=lat, longitude=lon, calculation_method='makkah', date=now.strftime("%Y-%m-%d"))
         times = calc.fetch_prayer_times()
         if times:
-            p_list = [('الفجر', times['Fajr']), ('الظهر', times['Dhuhr']), ('العصر', times['As
+            # السطر الذي كان يحتوي على الخطأ تم إصلاحه هنا بالكامل
+            p_list = [('الفجر', times['Fajr']), ('الظهر', times['Dhuhr']), ('العصر', times['Asr']), ('المغرب', times['Maghrib']), ('العشاء', times['Isha'])]
+            curr_f = now.strftime("%H:%M:%S")
+            for name, p_t in p_list:
+                p_f = f"{p_t}:00"
+                if p_f > curr_f:
+                    next_p_name = name
+                    target = sa_tz.localize(datetime.strptime(p_f, "%H:%M:%S").replace(year=now.year, month=now.month, day=now.day))
+                    diff = target - now
+                    h_v, rem = divmod(diff.seconds, 3600); m_v, s_v = divmod(rem, 60)
+                    time_left = f"{h_v:02d}:{m_v:02d}:{s_v:02d}"
+                    break
+    except Exception as e:
+        pass
+
+    with placeholder.container():
+        raw_t = now.strftime('%I:%M:%S')
+        if raw_t.startswith('0'): raw_t = raw_t[1:]
+        ampm = now.strftime('%p')
+
+        st.markdown(f"""
+            <div class='main-layout'>
+                <div class='unified-text time-display'>{raw_t}<span class='ampm-display'>{ampm}</span></div>
+                <div class='unified-text info-line'>{hij_str} | {mil_str}</div>
+                <div class='unified-text info-line'>متبقي على صلاة {next_p_name}: {time_left}</div>
+            </div>
+        """, unsafe_allow_html=True)
+
+    time.sleep(1)
