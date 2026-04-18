@@ -140,4 +140,15 @@ while True:
                     <div class='astro-item'>🌅 الغروب: {sunset}</div>
                 </div>
 
-                <div class='unified-text info-line' style='margin-top:20px
+                <div class='unified-text info-line' style='margin-top:20px; font-size:3.8vw;'>
+                    🍂 متبقي على فصل {season_name}: {days_to} يوم
+                </div>
+
+                <div class='footer-links'>
+                    <a href='https://twitter.com/aale1164' target='_blank'>𝕏 @aale1164</a>
+                    <a href='https://www.snapchat.com/add/aale112' target='_blank'>👻 aale112</a>
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
+
+    time.sleep(1)
