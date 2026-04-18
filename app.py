@@ -1,47 +1,45 @@
 import streamlit as st
 import time
-from datetime import datetime
 
-# إعدادات الصفحة
-st.set_page_config(page_title="Flat Earth Clock", page_icon="🌍")
+st.set_page_config(page_title="Flat Earth Clock", layout="centered")
 
-# تصميم واجهة المستخدم باستخدام CSS
+# تنسيق الواجهة (CSS)
 st.markdown("""
     <style>
     .main {
-        background-color: #0e1117;
-        text-align: center;
+        background-color: #000000;
     }
-    .clock-text {
+    .clock-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 80vh;
+        color: #00FF00;
         font-family: 'Courier New', Courier, monospace;
-        color: #00ff00;
-        font-size: 80px;
-        font-weight: bold;
-        border: 2px solid #333;
-        padding: 20px;
-        border-radius: 15px;
-        background: black;
-        box-shadow: 0 0 20px #00ff00;
+        text-shadow: 0 0 20px #00FF00;
     }
-    .theory-text {
-        color: white;
-        font-size: 20px;
-        margin-top: 20px;
-    }
+    .time { font-size: 80px; font-weight: bold; }
+    .date { font-size: 24px; margin-top: 10px; }
+    .footer { font-size: 18px; margin-top: 30px; color: #555; }
     </style>
     """, unsafe_allow_html=True)
 
-st.title("🕒 ساعة الأرض المسطحة الرقمية")
-st.write("استعراض الوقت بناءً على التوقيت المحلي بنمط رقمي")
+# حاوية الساعة
+placeholder = st.empty()
 
-# مكان عرض الساعة
-clock_placeholder = st.empty()
-
-# تشغيل الساعة بشكل مستمر
 while True:
-    now = datetime.now().strftime("%H:%M:%S")
-    clock_placeholder.markdown(f'<p class="clock-text">{now}</p>', unsafe_allow_index=True)
+    now = time.localtime()
+    current_time = time.strftime("%H:%M:%S", now)
+    current_date = time.strftime("%A, %d %B %Y", now)
     
-    st.markdown('<p class="theory-text">"الزمن ثابت.. والمركز هو القطب الشمالي"</p>', unsafe_allow_index=True)
+    with placeholder.container():
+        st.markdown(f"""
+            <div class="clock-container">
+                <div class="time">{current_time}</div>
+                <div class="date">{current_date}</div>
+                <div class="footer">Flat Earth Clock - Stationary & Central</div>
+            </div>
+            """, unsafe_allow_html=True)
     
     time.sleep(1)
