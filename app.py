@@ -4,39 +4,38 @@ from datetime import datetime
 import pytz
 from hijri_converter import Gregorian
 
-st.set_page_config(page_title="Flat Earth Pro", layout="centered")
+st.set_page_config(page_title="مواعيد الرواتب - السعودية", layout="centered")
 
-# تنسيق الواجهة (CSS)
+# تنسيق الواجهة (CSS) لتصميم احترافي وخدمي
 st.markdown("""
     <style>
-    .main { background-color: #000000; }
-    .clock-container {
+    .main { background-color: #0e1117; }
+    .stApp { background-color: #0e1117; }
+    .container {
         display: flex;
         flex-direction: column;
         align-items: center;
-        justify-content: center;
-        height: 90vh;
-        color: #00FF00;
-        font-family: 'Courier New', Courier, monospace;
-        text-shadow: 0 0 15px #00FF00;
         text-align: center;
+        color: #ffffff;
+        font-family: 'Arial';
     }
-    .map-img {
-        width: 250px;
-        filter: drop-shadow(0 0 10px #00FF00);
-        margin-bottom: 20px;
+    .salary-card {
+        background-color: #1e2130;
+        border-radius: 15px;
+        padding: 20px;
+        margin: 10px;
+        width: 90%;
+        border-right: 5px solid #00FF00;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
     }
-    .time { font-size: 85px; font-weight: bold; margin-bottom: 10px; }
-    .label-sa { font-size: 20px; color: #00FF00; margin-bottom: 20px; letter-spacing: 2px; }
-    .date { font-size: 22px; color: #ccc; }
-    .hijri { font-size: 26px; color: #FFA500; margin-top: 8px; font-weight: bold; direction: rtl; }
-    .icon { font-size: 50px; margin: 15px 0; }
-    .footer { font-size: 16px; margin-top: 30px; color: #444; font-style: italic; }
+    .time { font-size: 50px; font-weight: bold; color: #00FF00; }
+    .label-sa { font-size: 18px; color: #aaa; }
+    .hijri { font-size: 22px; color: #FFA500; margin-top: 5px; }
+    .social-links { margin-top: 30px; padding: 20px; border-top: 1px solid #333; width: 100%; }
+    .twitter { color: #1DA1F2; font-weight: bold; text-decoration: none; font-size: 18px; }
+    .snap { color: #FFFC00; font-weight: bold; text-decoration: none; font-size: 18px; }
     </style>
     """, unsafe_allow_html=True)
-
-placeholder = st.empty()
-map_url = "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2f/Flat_earth.png/600px-Flat_earth.png"
 
 # قائمة أسماء الأشهر الهجرية بالعربي
 hijri_months_ar = [
@@ -46,31 +45,53 @@ hijri_months_ar = [
 
 saudi_tz = pytz.timezone('Asia/Riyadh')
 
-while True:
-    now_saudi = datetime.now(saudi_tz)
-    hour = now_saudi.hour
-    
-    icon = "☀️" if 6 <= hour < 18 else "🌙"
+placeholder = st.empty()
 
-    # التوقيت والتاريخ الميلادي
-    current_time = now_saudi.strftime("%I:%M:%S %p")
-    greg_date = now_saudi.strftime("%A, %d %B %Y")
+while True:
+    now = datetime.now(saudi_tz)
     
-    # تحويل التاريخ للهجري مع التعريب
-    h = Gregorian(now_saudi.year, now_saudi.month, now_saudi.day).to_hijri()
+    # حساب الأيام المتبقية للرواتب (غالباً يوم 27 من كل شهر ميلادي)
+    salary_day = 27
+    if now.day <= salary_day:
+        days_left = salary_day - now.day
+    else:
+        # إذا فات يوم 27، يحسب للشهر القادم (تبسيط)
+        days_left = (30 - now.day) + salary_day
+    
+    # التوقيت
+    current_time = now.strftime("%I:%M:%S %p")
+    greg_date = now.strftime("%A, %d %B %Y")
+    
+    # التاريخ الهجري
+    h = Gregorian(now.year, now.month, now.day).to_hijri()
     month_name_ar = hijri_months_ar[h.month - 1]
     hijri_date = f"{h.day} {month_name_ar} {h.year} هـ"
-    
+
     with placeholder.container():
         st.markdown(f"""
-            <div class="clock-container">
-                <img src="{map_url}" class="map-img">
-                <div class="icon">{icon}</div>
+            <div class="container">
                 <div class="time">{current_time}</div>
                 <div class="label-sa">توقيت مكة المكرمة</div>
-                <div class="date">{greg_date}</div>
                 <div class="hijri">{hijri_date}</div>
-                <div class="footer">تطبيق خاص - الأرض ثابتة والمركز هو القطب الشمالي</div>
+                <div style="font-size: 18px; color: #ccc;">{greg_date}</div>
+                
+                <div style="margin-top: 30px; width: 100%;">
+                    <div class="salary-card">
+                        <h3 style="margin:0; color:#00FF00;">الرواتب الموحدة</h3>
+                        <p style="margin:5px 0;">متبقي <b>{days_left}</b> يوم على راتب القطاع العام والخاص</p>
+                    </div>
+                    
+                    <div class="salary-card" style="border-right-color: #FFA500;">
+                        <h3 style="margin:0; color:#FFA500;">الضمان الاجتماعي</h3>
+                        <p style="margin:5px 0;">يصرف في بداية كل شهر ميلادي</p>
+                    </div>
+                </div>
+
+                <div class="social-links">
+                    <p style="margin-bottom:10px; font-size: 14px; color: #888;">برمجة وتطوير</p>
+                    <a href="https://twitter.com/aale1164" class="twitter">Twitter: @aale1164</a><br>
+                    <a href="https://www.snapchat.com/add/aale112" class="snap">Snapchat: aale112</a>
+                </div>
             </div>
             """, unsafe_allow_html=True)
     
