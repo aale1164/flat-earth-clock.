@@ -5,20 +5,21 @@ import time
 from hijri_converter import Gregorian
 from streamlit_js_eval import get_geolocation
 
-# استيراد المكتبة بأمان
+# محاولة استيراد مكتبة أوقات الصلاة
 try:
     from prayer_times_calculator import PrayerTimesCalculator
 except ImportError:
     pass
 
-# إعداد الصفحة لإخفاء كافة العناصر الزائدة
+# إعدادات الصفحة لإخفاء العناصر الزائدة تماماً
 st.set_page_config(page_title="ساعة الصلاة - aale1164", layout="wide")
 
 sa_tz = pytz.timezone('Asia/Riyadh')
 
-# --- التصميم: واجهة نقية مع إزاحة ذكية للأسفل ---
+# --- التصميم: إزالة المنبه نهائياً وتنسيق المعلومات ---
 st.markdown("""
 <style>
+    /* إخفاء شريط الأدوات والقوائم */
     header, footer, .stDeployButton, #MainMenu { visibility: hidden !important; height: 0; }
     .block-container { padding: 0 !important; }
 
@@ -36,41 +37,51 @@ st.markdown("""
         align-items: center;
         height: 100vh;
         justify-content: flex-start;
-        padding-top: 5vh; /* وضع الساعة فوق القمر */
+        padding-top: 8vh;
     }
 
-    /* ستايل النصوص الموحد */
     .unified-text {
         color: #FFFFFF !important;
-        text-shadow: 2px 2px 10px rgba(0,0,0,0.6); 
+        text-shadow: 2px 2px 10px rgba(0,0,0,0.7); 
         margin: 0;
         line-height: 1.2;
         text-align: center;
     }
 
-    /* الساعة */
+    /* الساعة الرئيسية */
     .time-display { font-size: 16vw; font-weight: 900; }
     .ampm-display { font-size: 5vw; margin-right: 10px; }
 
-    /* التاريخ */
-    .date-line { font-size: 4.8vw; font-weight: 700; margin-top: 5px; }
+    /* التاريخ والمتبقي بنفس الحجم والنمط */
+    .info-line { font-size: 4.8vw; font-weight: 700; margin-top: 5px; }
 
-    /* متبقي على الصلاة: إزاحة إضافية للأسفل لتجنب الشمس */
-    .prayer-line { 
-        font-size: 4.8vw; 
-        font-weight: 700; 
-        margin-top: 45vh; /* إزاحة كبيرة لضمان النزول تحت منطقة الشمس */
+    /* تذييل حسابات التواصل */
+    .social-footer { 
+        margin-top: auto; 
+        padding-bottom: 40px; 
+        display: flex;
+        gap: 20px;
     }
-
+    .social-footer a {
+        color: white !important; 
+        text-decoration: none; 
+        font-size: 16px; 
+        font-weight: bold;
+        padding: 12px 24px; 
+        background: rgba(0,0,0,0.5); 
+        border-radius: 50px;
+        border: 1px solid rgba(255,255,255,0.2);
+    }
 </style>
 """, unsafe_allow_html=True)
 
-# جلب الموقع
+# جلب الإحداثيات (افتراضية: بريدة)
 location = get_geolocation()
 lat, lon = 26.32, 43.97 
 if location and 'coords' in location:
     lat, lon = location['coords']['latitude'], location['coords']['longitude']
 
+# حاوية العرض المتجددة (خالية من أي أزرار أو أخطاء برمجية)
 placeholder = st.empty()
 
 while True:
@@ -102,12 +113,17 @@ while True:
         if raw_t.startswith('0'): raw_t = raw_t[1:]
         ampm = now.strftime('%p')
 
+        # واجهة نظيفة واحترافية
         st.markdown(f"""
             <div class='main-layout'>
                 <div class='unified-text time-display'>{raw_t}<span class='ampm-display'>{ampm}</span></div>
-                <div class='unified-text date-line'>{hij_str} | {mil_str}</div>
-                
-                <div class='unified-text prayer-line'>متبقي على صلاة {next_p_name}: {time_left}</div>
+                <div class='unified-text info-line'>{hij_str} | {mil_str}</div>
+                <div class='unified-text info-line'>متبقي على صلاة {next_p_name}: {time_left}</div>
+
+                <div class='social-footer'>
+                    <a href='https://twitter.com/aale1164' target='_blank'>𝕏 @aale1164</a>
+                    <a href='https://www.snapchat.com/add/aale112' target='_blank'>👻 aale112</a>
+                </div>
             </div>
         """, unsafe_allow_html=True)
 
