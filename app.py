@@ -2,7 +2,6 @@ import streamlit as st
 import pytz
 from datetime import datetime, date
 import time
-import requests
 from hijri_converter import Gregorian
 from streamlit_js_eval import get_geolocation
 
@@ -16,21 +15,28 @@ st.set_page_config(page_title="ساعة الأرض - aale1164", layout="wide")
 
 sa_tz = pytz.timezone('Asia/Riyadh')
 
-# --- وظيفة حساب الفصول ---
+# --- وظيفة حساب الأيام المتبقية للفصول الفلكية ---
 def get_season_countdown():
     today = date.today()
-    seasons = [
-        ('الصيف', date(today.year, 6, 21)),
-        ('الخريف', date(today.year, 9, 23)),
-        ('الشتاء', date(today.year, 12, 21)),
-        ('الربيع', date(today.year + (1 if today > date(today.year, 3, 21) else 0), 3, 21))
+    year = today.year
+    # المواعيد التقريبية لبداية الفصول
+    seasons_dates = [
+        ('الربيع', date(year, 3, 21)),
+        ('الصيف', date(year, 6, 21)),
+        ('الخريف', date(year, 9, 23)),
+        ('الشتاء', date(year, 12, 21))
     ]
-    for name, s_date in sorted(seasons, key=lambda x: x[1]):
+    
+    # البحث عن الفصل القادم
+    for name, s_date in seasons_dates:
         if s_date > today:
             return name, (s_date - today).days
-    return seasons[0] # افتراضي
+            
+    # إذا تجاوزنا 21 ديسمبر، الفصل القادم هو الربيع في العام التالي
+    next_spring = date(year + 1, 3, 21)
+    return 'الربيع', (next_spring - today).days
 
-# --- التصميم المتطور (Modern Glassmorphism) ---
+# --- التصميم: دمج الفلك والطقس بشكل أنيق ---
 st.markdown("""
 <style>
     header, footer, .stDeployButton, #MainMenu { visibility: hidden !important; height: 0; }
@@ -64,32 +70,45 @@ st.markdown("""
     .time-val { font-size: 15vw; font-weight: 900; }
     .ampm-val { font-size: 4vw; margin-right: 10px; color: #FFA500; }
 
-    .info-line { font-size: 4vw; font-weight: 700; margin-top: 5px; opacity: 0.9; }
+    .info-line { font-size: 4.2vw; font-weight: 700; margin-top: 5px; opacity: 0.9; }
 
-    /* حاوية البيانات الفلكية والطقس */
+    /* شبكة البيانات الفلكية (الشروق والغروب) */
     .astro-grid {
         display: flex;
-        gap: 15px;
-        margin-top: 20px;
+        gap: 20px;
+        margin-top: 25px;
         background: rgba(255, 255, 255, 0.1);
-        padding: 10px 20px;
-        border-radius: 20px;
-        backdrop-filter: blur(5px);
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 12px 25px;
+        border-radius: 50px;
+        backdrop-filter: blur(8px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
     }
     .astro-item { font-size: 3.5vw; font-weight: bold; color: #FFFFFF; }
 
-    .footer-links { margin-top: auto; padding-bottom: 30px; display: flex; gap: 10px; }
-    .footer-links a {
-        color: white !important; text-decoration: none; font-size: 14px;
-        padding: 8px 15px; background: rgba(0,0,0,0.4); border-radius: 15px;
+    /* فوتر التواصل */
+    .footer-links { 
+        margin-top: auto; 
+        padding-bottom: 30px; 
+        display: flex; 
+        gap: 15px; 
     }
+    .footer-links a {
+        color: white !important; 
+        text-decoration: none; 
+        font-size: 16px;
+        padding: 10px 20px; 
+        background: rgba(0,0,0,0.5); 
+        border-radius: 50px;
+        border: 1px solid rgba(255,255,255,0.2);
+        transition: 0.3s;
+    }
+    .footer-links a:hover { background: rgba(255,255,255,0.2); }
 </style>
 """, unsafe_allow_html=True)
 
-# الموقع
+# جلب الموقع
 location = get_geolocation()
-lat, lon = 26.32, 43.97 
+lat, lon = 26.32, 43.97 # افتراضي: القصيم
 if location and 'coords' in location:
     lat, lon = location['coords']['latitude'], location['coords']['longitude']
 
@@ -100,16 +119,15 @@ while True:
     h = Gregorian(now.year, now.month, now.day).to_hijri()
     hij_str, mil_str = f"{h.day}/{h.month}/{h.year} هـ", f"{now.day}/{now.month}/{now.year} م"
     
-    # بيانات الصلاة والفلك
-    next_p_name, time_left = "الفجر", "00:00:00"
-    sunrise, sunset = "--:--", "--:--"
+    # حساب البيانات الفلكية
+    sunrise, sunset, next_p_name, time_left = "--:--", "--:--", "الفجر", "00:00:00"
     
     try:
         calc = PrayerTimesCalculator(latitude=lat, longitude=lon, calculation_method='makkah', date=now.strftime("%Y-%m-%d"))
         times = calc.fetch_prayer_times()
         if times:
             sunrise = times['Sunrise']
-            sunset = times['Maghrib'] # الغروب هو وقت المغرب تقريباً
+            sunset = times['Maghrib']
             p_list = [('الفجر', times['Fajr']), ('الظهر', times['Dhuhr']), ('العصر', times['Asr']), ('المغرب', times['Maghrib']), ('العشاء', times['Isha'])]
             curr_f = now.strftime("%H:%M:%S")
             for name, p_t in p_list:
@@ -122,7 +140,10 @@ while True:
                     break
     except: pass
 
-    season_name, days_to = get_season_countdown()
+    # حساب الفصل
+    season_name, days_rem = get_season_countdown()
+    # أيقونة الفصل
+    season_icon = "🌸" if season_name == "الربيع" else "☀️" if season_name == "الصيف" else "🍂" if season_name == "الخريف" else "❄️"
 
     with placeholder.container():
         raw_t = now.strftime('%I:%M:%S')
@@ -133,15 +154,18 @@ while True:
             <div class='main-layout'>
                 <div class='unified-text time-val'>{raw_t}<span class='ampm-val'>{ampm}</span></div>
                 <div class='unified-text info-line'>{hij_str} | {mil_str}</div>
-                <div class='unified-text info-line' style='color:#00FF00;'>متبقي على {next_p_name}: {time_left}</div>
+                
+                <div class='unified-text info-line' style='color:#00FF00; margin-top:10px;'>
+                    متبقي على {next_p_name}: {time_left}
+                </div>
 
                 <div class='astro-grid'>
                     <div class='astro-item'>☀️ الشروق: {sunrise}</div>
                     <div class='astro-item'>🌅 الغروب: {sunset}</div>
                 </div>
 
-                <div class='unified-text info-line' style='margin-top:20px; font-size:3.8vw;'>
-                    🍂 متبقي على فصل {season_name}: {days_to} يوم
+                <div class='unified-text info-line' style='margin-top:25px; font-size:4vw;'>
+                    {season_icon} متبقي على فصل {season_name}: {days_rem} يوم
                 </div>
 
                 <div class='footer-links'>
