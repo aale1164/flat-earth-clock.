@@ -5,7 +5,7 @@ import time
 from hijri_converter import Gregorian
 from streamlit_js_eval import get_geolocation
 
-# استيراد مكتبة الصلاة بأمان
+# محاولة استيراد مكتبة الصلاة بأمان
 try:
     from prayer_times_calculator import PrayerTimesCalculator
 except:
@@ -17,10 +17,10 @@ st.set_page_config(page_title="ساعة الرواتب والصلاة - aale1164
 sa_tz = pytz.timezone('Asia/Riyadh')
 months = ["المحرم", "صفر", "ربيع الأول", "ربيع الآخر", "جمادى الأولى", "جمادى الآخرة", "رجب", "شعبان", "رمضان", "شوال", "ذو القعدة", "ذو الحجة"]
 
-# طلب الموقع الجغرافي من المتصفح (ستظهر رسالة السماح للمستخدم)
+# طلب الموقع الجغرافي من المتصفح
 location = get_geolocation()
 
-# إحداثيات افتراضية (القصيم) في حال رفض المستخدم أو لم يتوفر الموقع بعد
+# إحداثيات افتراضية (القصيم) في حال لم يتوفر الموقع
 lat, lon = 26.32, 43.97 
 location_name = "القصيم (افتراضي)"
 
@@ -59,7 +59,7 @@ while True:
     now = datetime.now(sa_tz)
     h = Gregorian(now.year, now.month, now.day).to_hijri()
     
-    # حساب مواقيت الصلاة بناءً على الموقع (تلقائي أو افتراضي)
+    # حساب مواقيت الصلاة بناءً على الموقع
     prayers = None
     try:
         calc = PrayerTimesCalculator(latitude=lat, longitude=lon, calculation_method='makkah', date=now.strftime("%Y-%m-%d"))
@@ -68,7 +68,11 @@ while True:
         pass
 
     with placeholder.container():
-        st.markdown(f"<h1 style='text-align:center; color:#00FF00; font-size:65px; margin-bottom:0;'>{now.strftime('%I:%M:%S %p').replace('AM','صباحاً').replace('PM','مساءً')}</h1>", unsafe_allow_html=True)
+        # عرض الساعة بنظام 12 ساعة مع الثواني (I تعني 12 ساعة)
+        time_str = now.strftime('%I:%M:%S %p').replace('AM','صباحاً').replace('PM','مساءً')
+        if time_str.startswith('0'): time_str = time_str[1:] # إزالة الصفر في البداية لتجميل الشكل
+
+        st.markdown(f"<h1 style='text-align:center; color:#00FF00; font-size:65px; margin-bottom:0;'>{time_str}</h1>", unsafe_allow_html=True)
         st.markdown(f"<h3 style='text-align:center; color:#FFA500; margin-top:0;'>{h.day} {months[h.month-1]} {h.year} هـ</h3>", unsafe_allow_html=True)
         st.markdown(f"<p style='text-align:center; color:#aaa;'>📍 {location_name}</p>", unsafe_allow_html=True)
 
