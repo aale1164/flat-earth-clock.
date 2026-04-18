@@ -2,3 +2,4 @@ streamlit
 hijri-converter
 pytz
 prayer-times-calculator
+streamlit-js-eval
