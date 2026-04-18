@@ -17,81 +17,99 @@ st.set_page_config(page_title="ساعة الصلاة - aale1164", layout="center
 sa_tz = pytz.timezone('Asia/Riyadh')
 ADHAN_URL = "https://download.tvquran.com/download/Adhan/TVQuran.com_Adhan_1.mp3"
 
-# --- التصميم الزجاجي الفخم (إضاءة خلفية 100% وشفافية أمامية) ---
+# --- تصميم "النصوص العائمة": شفافية مطلقة وبدون خطوط ---
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@700;900&display=swap');
     
+    /* إخفاء شريط Streamlit العلوي وأي خطوط تلقائية */
+    header {visibility: hidden;}
+    .stDeployButton {display:none;}
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    
     .stApp {
-        /* إضاءة عالية جداً للخلفية لتكون الصورة واضحة تماماً */
+        /* إضاءة كاملة للخلفية لتظهر الصورة بوضوح باهر */
         background: linear-gradient(rgba(0,0,0,0.1), rgba(0,0,0,0.1)), 
                     url("https://raw.githubusercontent.com/aale1164/flat-earth-clock./main/background.png");
         background-size: cover; background-position: center;
         direction: rtl; font-family: 'Tajawal', sans-serif;
     }
 
-    /* تأثير الزجاج الشفاف للمقدمة */
-    .glass-box {
+    /* الحاوية الرئيسية بدون خلفية أو مربعات */
+    .floating-container {
         text-align: center;
-        background: rgba(0, 0, 0, 0.45); /* شفافية تبرز ما خلفها */
-        padding: 25px;
-        border-radius: 40px;
-        border: 1px solid rgba(255, 255, 255, 0.25);
-        backdrop-filter: blur(8px); /* تعتيم زجاجي خفيف جداً */
-        margin: 10px auto;
+        background: transparent; /* إزالة المربعات تماماً */
+        margin-top: 5vh;
     }
 
-    .time-text { font-size: 21vw; font-weight: 900; color: #FFFFFF; line-height: 1; text-shadow: 2px 2px 15px rgba(0,0,0,0.6); }
-    .ampm-text { font-size: 8vw; color: #00FF00; font-weight: bold; }
-    .date-text { font-size: 6vw; color: #FFA500; font-weight: 800; margin: 10px 0; text-shadow: 1px 1px 5px rgba(0,0,0,0.5); }
+    /* الساعة عائمة بوضوح عالي */
+    .time-text { 
+        font-size: 23vw; font-weight: 900; color: #FFFFFF; 
+        line-height: 1; 
+        text-shadow: 2px 2px 20px rgba(0,0,0,0.8); /* ظل لإبراز النص فوق الصورة */
+        margin: 0; 
+    }
+    .ampm-text { font-size: 8vw; color: #00FF00; font-weight: bold; margin-right: 10px; }
 
-    /* مربع الصلاة شفاف وأنيق */
-    .prayer-card {
-        background: rgba(255, 255, 255, 0.15); 
-        padding: 20px;
-        border-radius: 30px;
-        border: 1px solid rgba(255, 255, 255, 0.3);
-        margin: 15px auto;
-        width: 100%;
-        max-width: 380px;
+    /* التاريخ */
+    .date-text { 
+        font-size: 6.5vw; color: #FFA500; font-weight: 800; 
+        margin: 20px 0; 
+        text-shadow: 1px 1px 10px rgba(0,0,0,0.8);
     }
 
-    .prayer-label { font-size: 24px; color: #FFFFFF; font-weight: 900; margin-bottom: 5px; }
-    .countdown { font-size: 13vw; color: #00FF00; font-weight: 900; font-family: 'Courier New', monospace; }
+    /* قسم الصلاة القادمة عائم وبدون مربع */
+    .prayer-section {
+        margin-top: 30px;
+        background: transparent;
+    }
 
-    /* تنسيق أزرار التواصل */
-    .footer-btn {
+    .prayer-label { 
+        font-size: 26px; color: #FFFFFF; font-weight: 900; 
+        text-shadow: 1px 1px 10px rgba(0,0,0,0.8);
+    }
+    .countdown { 
+        font-size: 16vw; color: #00FF00; font-weight: 900; 
+        font-family: 'Courier New', monospace; 
+        text-shadow: 2px 2px 15px rgba(0,0,0,0.8);
+    }
+
+    /* زر الأذان بتنسيق هادئ */
+    .toggle-wrapper {
+        background: rgba(0, 136, 0, 0.7);
+        padding: 5px 20px;
+        border-radius: 50px;
+        border: 1px solid white;
         display: inline-block;
-        padding: 8px 18px;
-        background: rgba(255,255,255,0.1);
-        border-radius: 15px;
-        color: white !important;
-        text-decoration: none;
-        font-weight: bold;
-        margin: 5px;
-        border: 1px solid rgba(255,255,255,0.2);
-        font-size: 14px;
+    }
+
+    /* أزرار التواصل السفلية */
+    .footer-links { margin-top: 40px; }
+    .footer-links a { 
+        color: white !important; text-decoration: none; 
+        font-weight: bold; padding: 10px 20px; 
+        background: rgba(255,255,255,0.1); border-radius: 20px;
+        margin: 5px; border: 1px solid rgba(255,255,255,0.2);
     }
 </style>
 """, unsafe_allow_html=True)
 
-# 1. جلب الموقع (خارج أي حلقة)
+# 1. جلب الموقع
 location = get_geolocation()
 lat, lon = 26.32, 43.97
 if location and 'coords' in location:
     lat, lon = location['coords']['latitude'], location['coords']['longitude']
 
-# 2. ترتيب العناصر (تعريف col2 قبل استخدامها)
-st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
-col_a, col_b, col_c = st.columns([1, 10, 1])
-with col_b:
-    st.markdown("<div style='background: rgba(0,136,0,0.8); padding: 5px 15px; border-radius: 50px; border: 2px solid white; text-align:center;'>", unsafe_allow_html=True)
-    adhan_on = st.toggle("🔔 أذان الحرم المكي الشريف", value=True, key="final_safe_toggle")
-    st.markdown("</div>", unsafe_allow_html=True)
+# 2. زر الأذان (خارج الحلقة)
+st.markdown("<div style='text-align:center; margin-top:20px;'>", unsafe_allow_html=True)
+col_l, col_m, col_r = st.columns([1, 8, 1])
+with col_m:
+    adhan_on = st.toggle("🔔 أذان الحرم المكي", value=True, key="clean_mecca_toggle")
+st.markdown("</div>", unsafe_allow_html=True)
 
 placeholder = st.empty()
 
-# 3. حلقة التحديث
 while True:
     now = datetime.now(sa_tz)
     h = Gregorian(now.year, now.month, now.day).to_hijri()
@@ -123,16 +141,16 @@ while True:
         ampm = now.strftime('%p')
 
         st.markdown(f"""
-            <div class='glass-box'>
+            <div class='floating-container'>
                 <div class='time-text'>{raw_t}<span class='ampm-text'>{ampm}</span></div>
                 <div class='date-text'>{hij_str} | {mil_str}</div>
-                <div class='prayer-card'>
+                <div class='prayer-section'>
                     <div class='prayer-label'>متبقي على صلاة {next_p_name}</div>
                     <div class='countdown'>{time_left}</div>
                 </div>
-                <div style='margin-top:10px;'>
-                    <a href='https://twitter.com/aale1164' class='footer-btn' target='_blank'>𝕏 @aale1164</a>
-                    <a href='https://www.snapchat.com/add/aale112' class='footer-btn' target='_blank'>👻 aale112</a>
+                <div class='footer-links'>
+                    <a href='https://twitter.com/aale1164' target='_blank'>𝕏 @aale1164</a>
+                    <a href='https://www.snapchat.com/add/aale112' target='_blank'>👻 aale112</a>
                 </div>
             </div>
         """, unsafe_allow_html=True)
