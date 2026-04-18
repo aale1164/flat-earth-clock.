@@ -5,7 +5,7 @@ import time
 from hijri_converter import Gregorian
 from streamlit_js_eval import get_geolocation
 
-# استيراد المكتبة بأمان
+# استيراد مكتبة أوقات الصلاة
 try:
     from prayer_times_calculator import PrayerTimesCalculator
 except ImportError:
@@ -16,12 +16,11 @@ st.set_page_config(page_title="ساعة الصلاة - aale1164", layout="wide")
 sa_tz = pytz.timezone('Asia/Riyadh')
 ADHAN_URL = "https://download.tvquran.com/download/Adhan/TVQuran.com_Adhan_1.mp3"
 
-# --- تصميم "الظل المائي": توحيد الألوان، الظلال الشفافة، والترتيب الهندسي ---
+# --- التصميم الموحد: أبيض بظلال شفافة وتوزيع هندسي ---
 st.markdown("""
 <style>
-    /* إخفاء الزوائد تماماً */
     header, footer, .stDeployButton, #MainMenu { visibility: hidden !important; height: 0; }
-    div.block-container { padding: 0 !important; }
+    .block-container { padding: 0 !important; }
 
     .stApp {
         background: url("https://raw.githubusercontent.com/aale1164/flat-earth-clock./main/background.png");
@@ -36,44 +35,43 @@ st.markdown("""
         flex-direction: column;
         align-items: center;
         height: 100vh;
-        justify-content: space-between;
-        padding: 5vh 0;
+        justify-content: flex-start;
+        padding-top: 2vh; /* لرفع الساعة فوق القمر */
     }
 
-    /* ستايل موحد: أبيض مع ظل شفاف "نوع ماء" */
+    /* ستايل النص الموحد: أبيض بظل شفاف */
     .unified-style {
         color: #FFFFFF !important;
-        text-shadow: 2px 2px 12px rgba(0,0,0,0.4); /* ظل شفاف يعطي عمقاً هادئاً */
+        text-shadow: 2px 2px 12px rgba(0,0,0,0.4); 
         margin: 0;
         line-height: 1.1;
     }
 
-    /* الجزء العلوي: ساعة وتاريخ مصغرة فوق القمر */
-    .top-group { text-align: center; }
-    .time-mini { font-size: 14vw; font-weight: 900; }
+    /* الساعة فوق القمر */
+    .time-main { font-size: 16vw; font-weight: 900; }
     .ampm-mini { font-size: 5vw; margin-right: 10px; }
-    .date-mini { font-size: 4.5vw; font-weight: 700; margin-top: 5px; opacity: 0.85; }
 
-    /* الجزء الأوسط: المنبه عائم */
-    .adhan-center-box {
-        background: rgba(255, 255, 255, 0.08);
-        padding: 12px 25px;
+    /* التاريخ تحت الساعة */
+    .date-mini { font-size: 4.5vw; font-weight: 700; margin-top: 5px; }
+
+    /* حاوية المنبه في المنتصف */
+    .adhan-box {
+        margin: 15vh 0 5vh 0; /* مسافة ليتوسط الشاشة */
+        background: rgba(255, 255, 255, 0.05);
+        padding: 5px 25px;
         border-radius: 50px;
-        border: 1px solid rgba(255, 255, 255, 0.15);
-        backdrop-filter: blur(5px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
     }
 
-    /* الجزء السفلي: متبقي على الصلاة والعداد */
-    .bottom-group { text-align: center; margin-bottom: 20px; }
-    .label-mini { font-size: 5.5vw; font-weight: 800; margin-bottom: 10px; }
-    .timer-mini { font-size: 15vw; font-weight: 900; font-family: 'Courier New', monospace; }
+    /* متبقي على الصلاة في الأسفل */
+    .label-mini { font-size: 6vw; font-weight: 800; margin-top: 20px; }
+    .timer-mini { font-size: 14vw; font-weight: 900; font-family: 'Courier New', monospace; }
 
-    /* أزرار التواصل السفلية */
-    .footer-btns a {
-        color: white !important; text-decoration: none; font-weight: bold;
-        padding: 8px 18px; background: rgba(0,0,0,0.2); border-radius: 15px;
+    .social-footer { margin-top: auto; padding-bottom: 15px; }
+    .social-footer a {
+        color: white !important; text-decoration: none; font-size: 14px;
+        padding: 8px 15px; background: rgba(0,0,0,0.2); border-radius: 15px;
         margin: 5px; border: 1px solid rgba(255,255,255,0.1);
-        font-size: 14px;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -84,6 +82,7 @@ lat, lon = 26.32, 43.97
 if location and 'coords' in location:
     lat, lon = location['coords']['latitude'], location['coords']['longitude']
 
+# استخدام الـ Placeholder لمنع تكرار العناصر وتجنب أخطاء الكود
 placeholder = st.empty()
 
 while True:
@@ -118,29 +117,25 @@ while True:
 
         st.markdown(f"""
             <div class='main-layout'>
-                <div class='top-group'>
-                    <div class='unified-style time-mini'>{raw_t}<span class='ampm-mini'>{ampm}</span></div>
-                    <div class='unified-style date-mini'>{hij_str} | {mil_str}</div>
-                </div>
+                <div class='unified-style time-main'>{raw_t}<span class='ampm-mini'>{ampm}</span></div>
+                <div class='unified-style date-mini'>{hij_str} | {mil_str}</div>
                 
-                <div class='adhan-center-box'>
-                    <span class='unified-style' style='font-size: 18px; font-weight:bold;'>🔔 أذان الحرم المكي الشريف</span>
+                <div class='adhan-box'>
+                    <span style='color:white; font-size:18px;'>🔔 أذان الحرم المكي الشريف</span>
                 </div>
 
-                <div class='bottom-group'>
-                    <div class='unified-style label-mini'>متبقي على صلاة {next_p_name}</div>
-                    <div class='unified-style timer-mini'>{time_left}</div>
-                </div>
+                <div class='unified-style label-mini'>متبقي على صلاة {next_p_name}</div>
+                <div class='unified-style timer-mini'>{time_left}</div>
 
-                <div class='footer-btns'>
+                <div class='social-footer'>
                     <a href='https://twitter.com/aale1164' target='_blank'>𝕏 @aale1164</a>
                     <a href='https://www.snapchat.com/add/aale112' target='_blank'>👻 aale112</a>
                 </div>
             </div>
         """, unsafe_allow_html=True)
 
-        # زر التحكم (يظهر تحت الواجهة بشكل أنيق)
-        adhan_on = st.toggle("تفعيل الأذان", value=True, key="v7_toggle")
+        # زر التفعيل وضعته في الأسفل لمنع تداخل العناصر برمجياً
+        adhan_on = st.toggle("تفعيل التنبيه", value=True, key="fixed_adhan_toggle")
         
         if play_now and adhan_on:
             st.markdown(f'<audio src="{ADHAN_URL}" autoplay></audio>', unsafe_allow_html=True)
