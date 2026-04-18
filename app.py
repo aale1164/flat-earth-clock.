@@ -29,7 +29,7 @@ st.markdown("""
         margin-top: 20px;
     }
     </style>
-    """, unsafe_allow_index=True)
+    """, unsafe_allow_html=True)
 
 st.title("🕒 ساعة الأرض المسطحة الرقمية")
 st.write("استعراض الوقت بناءً على التوقيت المحلي بنمط رقمي")
