@@ -4,25 +4,38 @@ from datetime import datetime, date
 import time
 import requests
 from hijri_converter import Gregorian
-from streamlit_js_eval import get_geolocation
 
-# إعداد الصفحة لإخفاء العناصر غير الضرورية
+# إعداد الصفحة (يجب أن يكون في بداية الكود دائماً)
 st.set_page_config(page_title="ساعة الأرض - aale1164", layout="wide")
 
+# محاولة استيراد مكتبة أوقات الصلاة بشكل آمن
+try:
+    from prayer_times_calculator import PrayerTimesCalculator
+    PRAYER_LIB_AVAILABLE = True
+except ImportError:
+    PRAYER_LIB_AVAILABLE = False
+
+# محاولة استيراد مكتبة الموقع الجغرافي بشكل آمن
+try:
+    from streamlit_js_eval import get_geolocation
+    GEO_LIB_AVAILABLE = True
+except ImportError:
+    GEO_LIB_AVAILABLE = False
+
+# إعداد المنطقة الزمنية
 sa_tz = pytz.timezone('Asia/Riyadh')
 
-# --- وظيفة جلب الطقس ---
-def get_weather(lat, lon):
+# --- دوال المساعدة للطقس والفصول ---
+def fetch_weather(lat, lon):
     try:
         url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current_weather=true"
-        response = requests.get(url).json()
+        response = requests.get(url, timeout=5).json()
         temp = response['current_weather']['temperature']
         return f"{temp}°C"
-    except:
-        return "25°C"
+    except Exception:
+        return "--°C"
 
-# --- وظيفة حساب الفصول ---
-def get_season_info():
+def get_season_data():
     today = date.today()
     year = today.year
     seasons = [
@@ -34,11 +47,15 @@ def get_season_info():
     for name, s_date, icon in seasons:
         if s_date > today:
             return name, (s_date - today).days, icon
-    return "الربيع / Spring", (date(year + 1, 3, 21) - today).days, "🌸"
+            
+    # إذا تجاوزنا 21 ديسمبر، نحسب للربيع القادم
+    next_spring = date(year + 1, 3, 21)
+    return "الربيع / Spring", (next_spring - today).days, "🌸"
 
-# --- التصميم الجديد (عربي وانجليزي) ---
+# --- التنسيق البصري (CSS) ---
 st.markdown("""
 <style>
+    /* إخفاء شريط الأدوات الافتراضي */
     header, footer, .stDeployButton, #MainMenu { visibility: hidden !important; height: 0; }
     .block-container { padding: 0 !important; }
 
@@ -61,20 +78,10 @@ st.markdown("""
 
     .unified-text {
         color: #FFFFFF !important;
-        text-shadow: 2px 2px 12px rgba(0,0,0,0.8); 
+        text-shadow: 2px 2px 10px rgba(0,0,0,0.8); 
         margin: 0;
-        line-height: 1.1;
+        line-height: 1.2;
         text-align: center;
     }
 
-    .time-val { font-size: 14vw; font-weight: 900; }
-    .ampm-val { font-size: 4vw; margin-right: 10px; color: #FFA500; }
-    .info-line { font-size: 4vw; font-weight: 700; margin-top: 5px; }
-    .eng-sub { font-size: 2vw; opacity: 0.8; font-weight: 400; display: block; }
-
-    /* شريط البيانات الزجاجي */
-    .data-bar {
-        display: flex;
-        gap: 15px;
-        margin-top: 15px;
-        background: rgba(255, 2
+    .time-val { font-size: 14vw; font-weight: 900
