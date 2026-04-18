@@ -11,13 +11,12 @@ try:
 except ImportError:
     pass
 
-# إعداد الصفحة لإزالة الخطوط والزحام
+# إعداد الصفحة لإزالة أي هوامش علوية
 st.set_page_config(page_title="ساعة الصلاة - aale1164", layout="wide")
 
 sa_tz = pytz.timezone('Asia/Riyadh')
-ADHAN_URL = "https://download.tvquran.com/download/Adhan/TVQuran.com_Adhan_1.mp3"
 
-# --- التصميم الاحترافي الموحد (أبيض بظلال شفافة) ---
+# --- التصميم الجديد: بدون منبه وبتوزيع متناسق ---
 st.markdown("""
 <style>
     header, footer, .stDeployButton, #MainMenu { visibility: hidden !important; height: 0; }
@@ -37,58 +36,41 @@ st.markdown("""
         align-items: center;
         height: 100vh;
         justify-content: flex-start;
-        padding-top: 2vh;
+        padding-top: 5vh;
     }
 
-    /* ستايل النصوص الموحد (أبيض بظل مائي شفاف) */
+    /* ستايل النصوص الموحد (أبيض بظل شفاف) */
     .unified-text {
         color: #FFFFFF !important;
-        text-shadow: 2px 2px 12px rgba(0,0,0,0.4); 
+        text-shadow: 2px 2px 10px rgba(0,0,0,0.5); 
         margin: 0;
-        line-height: 1.1;
+        line-height: 1.2;
         text-align: center;
     }
 
-    /* الساعة فوق القمر ومصغرة */
-    .time-top { font-size: 14vw; font-weight: 900; }
-    .ampm-top { font-size: 4vw; margin-right: 8px; }
+    /* الساعة في الأعلى */
+    .time-main { font-size: 15vw; font-weight: 900; }
+    .ampm-mini { font-size: 5vw; margin-right: 10px; }
 
-    /* التاريخ تحت الساعة مباشرة وأصغر */
-    .date-sub { font-size: 4.5vw; font-weight: 700; margin-top: 5px; }
+    /* التاريخ والمتبقي على الصلاة بنفس الحجم تحت بعض */
+    .sub-info { font-size: 4.5vw; font-weight: 700; margin-top: 5px; }
 
-    /* حاوية الأذان (المنبه) في منتصف الشاشة */
-    .adhan-center-box {
-        margin: 15vh 0 5vh 0;
-        background: rgba(255, 255, 255, 0.08);
-        padding: 8px 25px;
-        border-radius: 50px;
-        border: 1px solid rgba(255, 255, 255, 0.15);
+    .social-footer { margin-top: auto; padding-bottom: 20px; }
+    .social-footer a {
+        color: white !important; text-decoration: none; font-size: 14px;
+        padding: 8px 18px; background: rgba(0,0,0,0.3); border-radius: 20px;
+        margin: 5px; border: 1px solid rgba(255,255,255,0.1);
     }
-
-    /* متبقي على الصلاة في الأسفل */
-    .prayer-label { font-size: 6vw; font-weight: 800; margin-top: 20px; }
-    .prayer-timer { font-size: 12vw; font-weight: 900; font-family: 'Courier New', monospace; }
-
-    /* التحكم في زر التبديل */
-    .stToggle { position: fixed; bottom: 80px; left: 20px; z-index: 1000; }
 </style>
 """, unsafe_allow_html=True)
 
-# 1. حل مشكلة Duplicate Key: تعريف الزر خارج حلقة التحديث
-if 'adhan_status' not in st.session_state:
-    st.session_state.adhan_status = True
-
-# وضع الزر في مكان جانبي أو ثابت لمنع تكراره برمجياً
-with st.sidebar:
-    st.session_state.adhan_status = st.toggle("تفعيل الأذان", value=st.session_state.adhan_status)
-
-# 2. جلب الموقع
+# جلب الموقع
 location = get_geolocation()
 lat, lon = 26.32, 43.97
 if location and 'coords' in location:
     lat, lon = location['coords']['latitude'], location['coords']['longitude']
 
-# 3. حاوية العرض المتجددة
+# حاوية العرض الرئيسية
 placeholder = st.empty()
 
 while True:
@@ -96,7 +78,7 @@ while True:
     h = Gregorian(now.year, now.month, now.day).to_hijri()
     hij_str, mil_str = f"{h.day}/{h.month}/{h.year} هـ", f"{now.day}/{now.month}/{now.year} م"
     
-    next_p_name, time_left, play_now = "الفجر", "00:00:00", False
+    next_p_name, time_left = "الفجر", "00:00:00"
     
     try:
         calc = PrayerTimesCalculator(latitude=lat, longitude=lon, calculation_method='makkah', date=now.strftime("%Y-%m-%d"))
@@ -113,7 +95,6 @@ while True:
                     h_v, rem = divmod(diff.seconds, 3600); m_v, s_v = divmod(rem, 60)
                     time_left = f"{h_v:02d}:{m_v:02d}:{s_v:02d}"
                     break
-                if curr_f == p_f: play_now = True
     except: pass
 
     with placeholder.container():
@@ -121,22 +102,17 @@ while True:
         if raw_t.startswith('0'): raw_t = raw_t[1:]
         ampm = now.strftime('%p')
 
-        # بناء الواجهة بتنسيق نظيف لمنع ظهور أكواد الـ HTML
         st.markdown(f"""
             <div class='main-layout'>
-                <div class='unified-text time-top'>{raw_t}<span class='ampm-top'>{ampm}</span></div>
-                <div class='unified-text date-sub'>{hij_str} | {mil_str}</div>
-                
-                <div class='adhan-center-box'>
-                    <div style='color:white; font-size:18px; font-weight:bold;'>🔔 أذان الحرم المكي الشريف</div>
-                </div>
+                <div class='unified-text time-main'>{raw_t}<span class='ampm-mini'>{ampm}</span></div>
+                <div class='unified-text sub-info'>{hij_str} | {mil_str}</div>
+                <div class='unified-text sub-info'>متبقي على صلاة {next_p_name}: {time_left}</div>
 
-                <div class='unified-text prayer-label'>متبقي على صلاة {next_p_name}</div>
-                <div class='unified-text prayer-timer'>{time_left}</div>
+                <div class='social-footer'>
+                    <a href='https://twitter.com/aale1164' target='_blank'>𝕏 @aale1164</a>
+                    <a href='https://www.snapchat.com/add/aale112' target='_blank'>👻 aale112</a>
+                </div>
             </div>
         """, unsafe_allow_html=True)
-        
-        if play_now and st.session_state.adhan_status:
-            st.markdown(f'<audio src="{ADHAN_URL}" autoplay></audio>', unsafe_allow_html=True)
 
     time.sleep(1)
