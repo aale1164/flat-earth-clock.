@@ -29,7 +29,7 @@ st.markdown("""
     .time { font-size: 85px; font-weight: bold; margin-bottom: 10px; }
     .label-sa { font-size: 20px; color: #00FF00; margin-bottom: 20px; letter-spacing: 2px; }
     .date { font-size: 22px; color: #ccc; }
-    .hijri { font-size: 26px; color: #FFA500; margin-top: 8px; font-weight: bold; }
+    .hijri { font-size: 26px; color: #FFA500; margin-top: 8px; font-weight: bold; direction: rtl; }
     .icon { font-size: 50px; margin: 15px 0; }
     .footer { font-size: 16px; margin-top: 30px; color: #444; font-style: italic; }
     </style>
@@ -38,25 +38,28 @@ st.markdown("""
 placeholder = st.empty()
 map_url = "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2f/Flat_earth.png/600px-Flat_earth.png"
 
-# تحديد المنطقة الزمنية للسعودية
+# قائمة أسماء الأشهر الهجرية بالعربي
+hijri_months_ar = [
+    "المحرم", "صفر", "ربيع الأول", "ربيع الآخر", "جمادى الأولى", "جمادى الآخرة",
+    "رجب", "شعبان", "رمضان", "شوال", "ذو القعدة", "ذو الحجة"
+]
+
 saudi_tz = pytz.timezone('Asia/Riyadh')
 
 while True:
-    # الحصول على الوقت الحالي بتوقيت السعودية
     now_saudi = datetime.now(saudi_tz)
     hour = now_saudi.hour
     
-    # تحديد التأثير البصري (شمس أو قمر)
     icon = "☀️" if 6 <= hour < 18 else "🌙"
 
-    # التوقيت بنظام 12 ساعة
+    # التوقيت والتاريخ الميلادي
     current_time = now_saudi.strftime("%I:%M:%S %p")
-    # التاريخ الميلادي
     greg_date = now_saudi.strftime("%A, %d %B %Y")
     
-    # التاريخ الهجري
+    # تحويل التاريخ للهجري مع التعريب
     h = Gregorian(now_saudi.year, now_saudi.month, now_saudi.day).to_hijri()
-    hijri_date = f"{h.day} {h.month_name()} {h.year} هـ"
+    month_name_ar = hijri_months_ar[h.month - 1]
+    hijri_date = f"{h.day} {month_name_ar} {h.year} هـ"
     
     with placeholder.container():
         st.markdown(f"""
