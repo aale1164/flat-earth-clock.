@@ -11,18 +11,17 @@ try:
 except ImportError:
     pass
 
-# إعداد الصفحة لملء الشاشة وإخفاء الزوائد
+# إعداد الصفحة لإزالة الشوائب تماماً
 st.set_page_config(page_title="ساعة الصلاة - aale1164", layout="wide")
 
-# توقيت السعودية
 sa_tz = pytz.timezone('Asia/Riyadh')
 ADHAN_URL = "https://download.tvquran.com/download/Adhan/TVQuran.com_Adhan_1.mp3"
 
-# --- هندسة التصميم: إزالة الشوائب وتثبيت العناصر فوق الخلفية ---
+# --- هندسة التصميم: إزالة الخطوط، رفع الساعة، توحيد الظلال ---
 st.markdown("""
 <style>
-    /* حذف الخطوط البيضاء وأشرطة ستريمليت تماماً */
-    header, footer, .stDeployButton, #MainMenu { visibility: hidden !important; height: 0; position: fixed; }
+    /* حذف كل زوائد ستريمليت والخطوط البيضاء */
+    header, footer, .stDeployButton, #MainMenu { visibility: hidden !important; height: 0; }
     div.block-container { padding: 0 !important; margin: 0 !important; }
 
     .stApp {
@@ -34,63 +33,62 @@ st.markdown("""
         direction: rtl;
     }
 
-    /* الحاوية الرئيسية للهيكل الجديد */
-    .master-container {
+    .master-wrapper {
         display: flex;
         flex-direction: column;
         align-items: center;
         height: 100vh;
         width: 100vw;
-        text-align: center;
-        justify-content: space-between;
-        padding: 5vh 0;
+        justify-content: flex-start;
+        padding-top: 2vh; /* لرفع الساعة فوق القمر */
     }
 
-    /* ستايل النصوص الموحد (أبيض بظل مائي شفاف) */
-    .text-glow {
+    /* الستايل الموحد: أبيض بظل مائي شفاف */
+    .glow-text {
         color: #FFFFFF !important;
-        text-shadow: 0px 0px 15px rgba(0,0,0,0.7); 
+        text-shadow: 2px 2px 15px rgba(0,0,0,0.6); 
         font-family: 'Tajawal', sans-serif;
         line-height: 1.1;
+        text-align: center;
     }
 
-    /* الساعة فوق القمر ومصغرة */
-    .main-clock { font-size: 16vw; font-weight: 900; margin: 0; }
-    .ampm-label { font-size: 5vw; margin-right: 8px; }
+    /* الساعة */
+    .clock-large { font-size: 16vw; font-weight: 900; }
+    .ampm-small { font-size: 5vw; margin-right: 10px; }
 
-    /* التاريخ تحت الساعة مباشرة */
-    .date-label { font-size: 5vw; font-weight: 700; margin-top: -1vh; }
+    /* التاريخ */
+    .date-small { font-size: 5vw; font-weight: 700; margin-top: -10px; }
 
-    /* حاوية الأذان في المنتصف */
-    .mid-section {
-        margin: 5vh 0;
+    /* حاوية الأذان (المنتصف) */
+    .adhan-mid {
+        margin: 12vh 0 5vh 0;
         background: rgba(255, 255, 255, 0.1);
-        padding: 10px 30px;
+        padding: 8px 25px;
         border-radius: 50px;
         border: 1px solid rgba(255, 255, 255, 0.2);
     }
 
-    /* متبقي على الصلاة في الأسفل وبنفس نمط الساعة */
-    .bottom-label { font-size: 6vw; font-weight: 800; }
-    .bottom-timer { font-size: 14vw; font-weight: 900; font-family: 'Courier New', monospace; }
+    /* متبقي على الصلاة */
+    .pray-label { font-size: 6vw; font-weight: 800; margin-top: 15px; }
+    .pray-timer { font-size: 14vw; font-weight: 900; font-family: 'Courier New', monospace; }
 
-    /* روابط التواصل */
-    .social-box a {
+    /* الروابط */
+    .footer-box a {
         color: white !important; text-decoration: none; font-size: 14px;
-        padding: 8px 15px; background: rgba(0,0,0,0.4); border-radius: 20px;
+        padding: 8px 15px; background: rgba(0,0,0,0.3); border-radius: 20px;
         margin: 5px; border: 1px solid rgba(255,255,255,0.1);
     }
 </style>
 """, unsafe_allow_html=True)
 
-# الحصول على الإحداثيات
+# الموقع
 location = get_geolocation()
 lat, lon = 26.32, 43.97
 if location and 'coords' in location:
     lat, lon = location['coords']['latitude'], location['coords']['longitude']
 
-# Placeholder واحد للمحتوى بالكامل لتجنب أخطاء Duplicate Key
-content_space = st.empty()
+# استخدام Placeholder واحد فقط لتحديث الشاشة
+ui_space = st.empty()
 
 while True:
     now = datetime.now(sa_tz)
@@ -103,27 +101,4 @@ while True:
         calc = PrayerTimesCalculator(latitude=lat, longitude=lon, calculation_method='makkah', date=now.strftime("%Y-%m-%d"))
         times = calc.fetch_prayer_times()
         if times:
-            p_list = [('الفجر', times['Fajr']), ('الظهر', times['Dhuhr']), ('العصر', times['Asr']), ('المغرب', times['Maghrib']), ('العشاء', times['Isha'])]
-            curr_f = now.strftime("%H:%M:%S")
-            for name, p_t in p_list:
-                p_f = f"{p_t}:00"
-                if p_f > curr_f:
-                    next_p_name = name
-                    target = sa_tz.localize(datetime.strptime(p_f, "%H:%M:%S").replace(year=now.year, month=now.month, day=now.day))
-                    diff = target - now
-                    h_v, rem = divmod(diff.seconds, 3600); m_v, s_v = divmod(rem, 60)
-                    time_left = f"{h_v:02d}:{m_v:02d}:{s_v:02d}"
-                    break
-                if curr_f == p_f: play_now = True
-    except: pass
-
-    with content_space.container():
-        raw_t = now.strftime('%I:%M:%S')
-        if raw_t.startswith('0'): raw_t = raw_t[1:]
-        ampm = now.strftime('%p')
-
-        # الهيكل البرمجي الصافي بدون تداخل الـ HTML
-        st.markdown(f"""
-            <div class='master-container'>
-                <div class='top-box'>
-                    <div class='text-glow main-clock'>{raw_
+            p_list = [('الفجر', times['Fajr']), ('الظهر', times['Dhuhr']), ('العصر', times['Asr']), ('المغرب', times['Magh
