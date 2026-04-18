@@ -11,91 +11,87 @@ try:
 except ImportError:
     pass
 
-# إعداد الصفحة لملء الشاشة
 st.set_page_config(page_title="ساعة الصلاة - aale1164", layout="wide")
 
 sa_tz = pytz.timezone('Asia/Riyadh')
 ADHAN_URL = "https://download.tvquran.com/download/Adhan/TVQuran.com_Adhan_1.mp3"
 
-# --- التصميم النهائي: إزالة الخطوط، ملء الشاشة، نصوص عائمة ثابتة ---
+# --- تصميم احترافي: تناسق هندسي، ظلال شفافة، ألوان موحدة ---
 st.markdown("""
 <style>
-    /* 1. حذف الخط الأبيض العلوي وكل زوائد المنصة تماماً */
-    header, footer, .stDeployButton, #MainMenu {
-        visibility: hidden !important;
-        height: 0 !important;
-        margin: 0 !important;
-        padding: 0 !important;
-    }
-    
-    /* 2. جعل التطبيق يملأ الشاشة بالكامل بدون هوامش */
-    .block-container {
-        padding: 0 !important;
-        margin: 0 !important;
-        max-width: 100% !important;
-    }
+    header, footer, .stDeployButton, #MainMenu { visibility: hidden !important; height: 0; }
+    .block-container { padding: 0 !important; }
 
     .stApp {
-        background: linear-gradient(rgba(0,0,0,0.1), rgba(0,0,0,0.1)), 
-                    url("https://raw.githubusercontent.com/aale1164/flat-earth-clock./main/background.png");
-        background-size: 100% 100%; /* جعل الخلفية بنفس حجم الواجهة بالضبط */
-        background-position: center;
-        background-repeat: no-repeat;
+        background: url("https://raw.githubusercontent.com/aale1164/flat-earth-clock./main/background.png");
+        background-size: 100% 100%;
         background-attachment: fixed;
-        direction: rtl; 
+        direction: rtl;
         font-family: 'Tajawal', sans-serif;
     }
 
-    /* 3. تثبيت المحتوى في منتصف الشاشة كلياً */
-    .main-wrapper {
+    .main-layout {
         display: flex;
         flex-direction: column;
-        justify-content: center;
         align-items: center;
-        height: 100vh; /* ملء ارتفاع الشاشة */
-        text-align: center;
+        height: 100vh;
+        justify-content: flex-start;
+        padding-top: 5vh; /* رفع العناصر للأعلى */
     }
 
-    /* 4. تنسيق الساعة (ثابتة وعائمة) */
-    .time-val { 
-        font-size: 25vw; 
-        font-weight: 900; 
-        color: #FFFFFF; 
-        line-height: 0.8; 
-        text-shadow: 0px 0px 30px rgba(0,0,0,1); /* ظل عميق للوضوح */
+    /* توحيد ستايل النص: أبيض بظلال شفافة */
+    .unified-text {
+        color: #FFFFFF !important;
+        text-shadow: 2px 2px 15px rgba(0,0,0,0.5); /* ظل شفاف ونوع ماء */
         margin: 0;
-    }
-    .ampm-val { font-size: 8vw; color: #00FF00; font-weight: bold; }
-
-    .date-val { 
-        font-size: 7vw; 
-        color: #FFA500; 
-        font-weight: 800; 
-        margin: 15px 0;
-        text-shadow: 0px 0px 15px rgba(0,0,0,1);
+        line-height: 1;
     }
 
-    .prayer-title { 
-        font-size: 28px; color: #FFFFFF; font-weight: 900; 
-        text-shadow: 0px 0px 10px rgba(0,0,0,1);
-        margin-top: 20px;
+    /* 1. الساعة: فوق القمر ومصغرة */
+    .time-top {
+        font-size: 16vw; 
+        font-weight: 900;
+        margin-bottom: 5px;
     }
-    .prayer-timer-val { 
-        font-size: 18vw; color: #00FF00; font-weight: 900; 
+    .ampm-small { font-size: 5vw; vertical-align: middle; margin-right: 10px; }
+
+    /* 2. التاريخ: تحت الساعة مباشرة وأصغر خط */
+    .date-sub {
+        font-size: 5vw;
+        font-weight: 700;
+        opacity: 0.9;
+        margin-bottom: 40px;
+    }
+
+    /* 3. المنبه: في المنتصف تماماً */
+    .adhan-center {
+        background: rgba(255, 255, 255, 0.1);
+        padding: 10px 30px;
+        border-radius: 50px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        margin: 20px 0;
+    }
+
+    /* 4. متبقي على الصلاة: تحت القمر والنجوم */
+    .prayer-label-bottom {
+        font-size: 6vw;
+        font-weight: 800;
+        margin-top: 40px;
+    }
+    .timer-bottom {
+        font-size: 14vw;
+        font-weight: 900;
         font-family: 'Courier New', monospace;
-        text-shadow: 0px 0px 20px rgba(0,0,0,1);
+        margin-top: 10px;
     }
 
     /* روابط التواصل */
-    .footer-links { margin-top: 30px; }
-    .footer-links a { 
-        color: white !important; text-decoration: none; font-weight: bold; 
-        padding: 10px 20px; background: rgba(0,0,0,0.4); border-radius: 20px;
-        margin: 5px; border: 1px solid rgba(255,255,255,0.2);
+    .footer-links { margin-top: auto; padding-bottom: 20px; }
+    .footer-links a {
+        color: white !important; text-decoration: none; font-weight: bold;
+        padding: 8px 15px; background: rgba(0,0,0,0.3); border-radius: 15px;
+        margin: 5px; border: 1px solid rgba(255,255,255,0.1);
     }
-
-    /* تنسيق زر التبديل ليكون شفافاً */
-    .stToggle { background: transparent !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -104,11 +100,6 @@ location = get_geolocation()
 lat, lon = 26.32, 43.97
 if location and 'coords' in location:
     lat, lon = location['coords']['latitude'], location['coords']['longitude']
-
-# زر الأذان (مخفي بذكاء)
-st.markdown("<div style='position: fixed; top: 10px; right: 10px; z-index: 1000;'>", unsafe_allow_html=True)
-adhan_on = st.toggle("🔔 أذان", value=True, key="ultimate_toggle")
-st.markdown("</div>", unsafe_allow_html=True)
 
 placeholder = st.empty()
 
@@ -142,18 +133,28 @@ while True:
         if raw_t.startswith('0'): raw_t = raw_t[1:]
         ampm = now.strftime('%p')
 
+        # الهيكل الجديد للواجهة
         st.markdown(f"""
-            <div class='main-wrapper'>
-                <div class='time-val'>{raw_t}<span class='ampm-val'>{ampm}</span></div>
-                <div class='date-val'>{hij_str} | {mil_str}</div>
-                <div class='prayer-title'>متبقي على صلاة {next_p_name}</div>
-                <div class='prayer-timer-val'>{time_left}</div>
+            <div class='main-layout'>
+                <div class='unified-text time-top'>{raw_t}<span class='ampm-small'>{ampm}</span></div>
+                <div class='unified-text date-sub'>{hij_str} | {mil_str}</div>
+                
+                <div class='adhan-center'>
+                    <span style='color:white; font-weight:bold;'>🔔 أذان الحرم المكي الشريف</span>
+                </div>
+
+                <div class='unified-text prayer-label-bottom'>متبقي على صلاة {next_p_name}</div>
+                <div class='unified-text timer-bottom'>{time_left}</div>
+
                 <div class='footer-links'>
                     <a href='https://twitter.com/aale1164' target='_blank'>𝕏 @aale1164</a>
                     <a href='https://www.snapchat.com/add/aale112' target='_blank'>👻 aale112</a>
                 </div>
             </div>
         """, unsafe_allow_html=True)
+
+        # التحكم في الأذان (موضعه في الكود سيظهر تحت العناصر)
+        adhan_on = st.toggle("تفعيل الأذان", value=True, key="center_toggle")
         
         if play_now and adhan_on:
             st.markdown(f'<audio src="{ADHAN_URL}" autoplay></audio>', unsafe_allow_html=True)
