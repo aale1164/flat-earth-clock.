@@ -14,9 +14,9 @@ except:
 st.set_page_config(page_title="Clock", layout="centered")
 
 sa_tz = pytz.timezone('Asia/Riyadh')
-AD_URL = "https://download.tvquran.com/download/Adhan/TVQuran.com_Adhan_1.mp3"
+URL = "https://download.tvquran.com/download/Adhan/TVQuran.com_Adhan_1.mp3"
 
-# تصميم شفاف وهادئ
+# تصميم شفاف وواضح
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@700;900&display=swap');
@@ -64,7 +64,6 @@ while True:
     now = datetime.now(sa_tz)
     h = Gregorian(now.year, now.month, now.day).to_hijri()
     
-    # أسطر قصيرة جداً لمنع الانقطاع
     h_str = f"{h.day}/{h.month}/{h.year} هـ"
     m_str = f"{now.day}/{now.month}/{now.year} م"
     
@@ -80,6 +79,42 @@ while True:
                 target_s = f"{pt}:00"
                 if target_s > curr:
                     p_name = name
-                    fmt = "%H:%M:%S"
-                    obj = datetime.strptime(target_s, fmt)
-                    t_obj = sa_tz.localize(obj.replace(year=now.year, month=now.month, day=
+                    # فك الأسطر الطويلة لأسطر قصيرة جداً
+                    y, m, d = now.year, now.month, now.day
+                    obj = datetime.strptime(target_s, "%H:%M:%S")
+                    obj = obj.replace(year=y, month=m, day=d)
+                    t_obj = sa_tz.localize(obj)
+                    diff = t_obj - now
+                    sec = diff.seconds
+                    hh, rem = divmod(sec, 3600)
+                    mm, ss = divmod(rem, 60)
+                    t_rem = f"{hh:02d}:{mm:02d}:{ss:02d}"
+                    break
+                if curr == target_s:
+                    play = True
+    except:
+        pass
+
+    with placeholder.container():
+        raw_t = now.strftime('%I:%M:%S').lstrip('0')
+        ampm = now.strftime('%p')
+
+        st.markdown(f"""
+            <div class='glass'>
+                <div class='t-txt'>{raw_t}<span style='color:#0f0;font-size:7vw;'>{ampm}</span></div>
+                <div style='color:#ffa500;font-size:5vw;font-weight:700;'>{h_str} | {m_str}</div>
+                <div class='prayer-card'>
+                    <div style='color:#333;font-size:22px;font-weight:bold;'>متبقي على صلاة {p_name}</div>
+                    <div class='p-time'>{t_rem}</div>
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
+
+        col1, col2, col3 = st.columns([1, 10, 1])
+        with col2:
+            on = st.toggle("🔔 أذان الحرم المكي الشريف", value=True, key="v6")
+
+        if play and on:
+            st.markdown(f'<audio src="{URL}" autoplay></audio>', unsafe_allow_html=True)
+
+    time.sleep(1)
