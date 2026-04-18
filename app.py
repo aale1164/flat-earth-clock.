@@ -29,12 +29,12 @@ st.markdown(f"""
         text-align: center; background: rgba(0,255,0,0.1); padding: 20px;
         border-radius: 15px; border: 2px solid #00FF00; margin-top: 20px;
     }}
-    .countdown {{ font-size: 45px; color: #00FF00; font-weight: bold; }}
+    .countdown {{ font-size: 45px; color: #00FF00; font-weight: bold; font-family: 'Courier New', monospace; }}
     .date-text {{ font-size: 22px; color: #FFA500; font-weight: bold; text-align: center; margin-top: 10px; }}
 </style>
 """, unsafe_allow_html=True)
 
-# طلب الموقع الجغرافي (هنا جعلناه لا يعطل الكود)
+# طلب الموقع الجغرافي
 location = get_geolocation()
 lat, lon = 26.32, 43.97  # إحداثيات القصيم (افتراضي)
 loc_label = "القصيم"
@@ -50,7 +50,7 @@ while True:
     now = datetime.now(sa_tz)
     h = Gregorian(now.year, now.month, now.day).to_hijri()
     
-    # تنسيق التاريخ أرقام (يظهر فوراً)
+    # تنسيق التاريخ أرقام
     hij_str = f"{h.day}/{h.month}/{h.year} هـ"
     mil_str = f"{now.day}/{now.month}/{now.year} م"
     
@@ -78,11 +78,11 @@ while True:
         if not next_p_name:
             next_p_name = "الفجر"; time_left = "صلاة الغد"
     except:
-        time_left = "جاري التحميل..."
+        time_left = "جاري الحساب..."
 
     with placeholder.container():
-        # الساعة
-        t_display = now.strftime('%I:%M:%S %p').replace('AM','صباحاً').replace('PM','مساءً')
+        # عرض الساعة بنظام 12 ساعة مع AM/PM
+        t_display = now.strftime('%I:%M:%S %p')
         if t_display.startswith('0'): t_display = t_display[1:]
         
         st.markdown(f"<h1 style='text-align:center; color:#fff; font-size:80px; margin-bottom:0;'>{t_display}</h1>", unsafe_allow_html=True)
