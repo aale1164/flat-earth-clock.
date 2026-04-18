@@ -140,3 +140,7 @@ while True:
             """, unsafe_allow_html=True)
 
     except Exception as e:
+        # إظهار الخطأ بشكل صامت أو في سجلات النظام فقط
+        pass
+
+    time.sleep(1)
