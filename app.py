@@ -16,7 +16,7 @@ st.set_page_config(page_title="ساعة الصلاة - aale1164", layout="center
 # توقيت السعودية
 sa_tz = pytz.timezone('Asia/Riyadh')
 
-# تصميم الواجهة CSS
+# تصميم الواجهة CSS المطور للالتصاق
 st.markdown(f"""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@700&display=swap');
@@ -25,18 +25,25 @@ st.markdown(f"""
         background-size: cover; background-position: center; background-attachment: fixed;
         direction: rtl; font-family: 'Tajawal', sans-serif;
     }}
+    .time-display {{
+        text-align: center; color: #fff; font-size: 85px; font-weight: bold;
+        letter-spacing: -2px; line-height: 1; margin-bottom: 0;
+    }}
+    .ampm-style {{
+        font-size: 35px; margin-right: -10px; color: #00FF00;
+    }}
     .prayer-card {{
-        text-align: center; background: rgba(0,255,0,0.1); padding: 20px;
+        text-align: center; background: rgba(0,255,0,0.1); padding: 15px;
         border-radius: 15px; border: 2px solid #00FF00; margin-top: 20px;
     }}
     .countdown {{ font-size: 45px; color: #00FF00; font-weight: bold; font-family: 'Courier New', monospace; }}
-    .date-text {{ font-size: 22px; color: #FFA500; font-weight: bold; text-align: center; margin-top: 10px; }}
+    .date-text {{ font-size: 24px; color: #FFA500; font-weight: bold; text-align: center; margin-top: 5px; }}
 </style>
 """, unsafe_allow_html=True)
 
 # طلب الموقع الجغرافي
 location = get_geolocation()
-lat, lon = 26.32, 43.97  # إحداثيات القصيم (افتراضي)
+lat, lon = 26.32, 43.97  # القصيم افتراضياً
 loc_label = "القصيم"
 
 if location and 'coords' in location:
@@ -81,17 +88,5 @@ while True:
         time_left = "جاري الحساب..."
 
     with placeholder.container():
-        # عرض الساعة بنظام 12 ساعة مع AM/PM
-        t_display = now.strftime('%I:%M:%S %p')
-        if t_display.startswith('0'): t_display = t_display[1:]
-        
-        st.markdown(f"<h1 style='text-align:center; color:#fff; font-size:80px; margin-bottom:0;'>{t_display}</h1>", unsafe_allow_html=True)
-        st.markdown(f"<div class='date-text'>{hij_str} | {mil_str}</div>", unsafe_allow_html=True)
-        st.markdown(f"<p style='text-align:center; color:#888;'>📍 {loc_label}</p>", unsafe_allow_html=True)
-
-        if next_p_name:
-            st.markdown(f'<div class="prayer-card"><p style="color:#fff; font-size:20px;">متبقي على صلاة {next_p_name}</p><div class="countdown">{time_left}</div></div>', unsafe_allow_html=True)
-
-        st.markdown(f'<div style="text-align:center; margin-top:40px; opacity:0.7;"><a href="https://twitter.com/aale1164" style="color:#1DA1F2; text-decoration:none;">𝕏 @aale1164</a> | <a href="https://www.snapchat.com/add/aale112" style="color:#FFFC00; text-decoration:none;">👻 aale112</a></div>', unsafe_allow_html=True)
-    
-    time.sleep(1)
+        # فصل الوقت عن AM/PM للتحكم في الالتصاق
+        raw_time = now
