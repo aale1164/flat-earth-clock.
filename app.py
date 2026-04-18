@@ -11,14 +11,16 @@ try:
 except ImportError:
     pass
 
+# إعداد الصفحة لإزالة أي خطوط بيضاء علوية
 st.set_page_config(page_title="ساعة الصلاة - aale1164", layout="wide")
 
 sa_tz = pytz.timezone('Asia/Riyadh')
 ADHAN_URL = "https://download.tvquran.com/download/Adhan/TVQuran.com_Adhan_1.mp3"
 
-# --- التصميم الموحد: أبيض بظلال شفافة وتوزيع هندسي ---
+# --- التصميم النهائي: معالجة نصوص الـ HTML وتوحيد الألوان ---
 st.markdown("""
 <style>
+    /* إخفاء تام للعناصر العلوية والخطوط البيضاء */
     header, footer, .stDeployButton, #MainMenu { visibility: hidden !important; height: 0; }
     .block-container { padding: 0 !important; }
 
@@ -36,41 +38,39 @@ st.markdown("""
         align-items: center;
         height: 100vh;
         justify-content: flex-start;
-        padding-top: 2vh; /* لرفع الساعة فوق القمر */
+        padding-top: 3vh;
     }
 
-    /* ستايل النص الموحد: أبيض بظل شفاف */
+    /* ستايل النصوص الموحد (أبيض بظل شفاف) */
     .unified-style {
         color: #FFFFFF !important;
-        text-shadow: 2px 2px 12px rgba(0,0,0,0.4); 
+        text-shadow: 2px 2px 15px rgba(0,0,0,0.6); 
         margin: 0;
-        line-height: 1.1;
+        line-height: 1.2;
+        text-align: center;
     }
 
-    /* الساعة فوق القمر */
     .time-main { font-size: 16vw; font-weight: 900; }
-    .ampm-mini { font-size: 5vw; margin-right: 10px; }
+    .ampm-mini { font-size: 5vw; margin-right: 10px; color: #FFFFFF !important; }
+    .date-mini { font-size: 5vw; font-weight: 700; margin-top: 5px; }
 
-    /* التاريخ تحت الساعة */
-    .date-mini { font-size: 4.5vw; font-weight: 700; margin-top: 5px; }
-
-    /* حاوية المنبه في المنتصف */
-    .adhan-box {
-        margin: 15vh 0 5vh 0; /* مسافة ليتوسط الشاشة */
-        background: rgba(255, 255, 255, 0.05);
-        padding: 5px 25px;
+    /* حاوية الأذان في المنتصف */
+    .adhan-container {
+        margin: 12vh 0 5vh 0;
+        padding: 10px 25px;
+        background: rgba(255, 255, 255, 0.08);
         border-radius: 50px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
     }
 
-    /* متبقي على الصلاة في الأسفل */
-    .label-mini { font-size: 6vw; font-weight: 800; margin-top: 20px; }
-    .timer-mini { font-size: 14vw; font-weight: 900; font-family: 'Courier New', monospace; }
+    /* متبقي على الصلاة (نصوص موحدة) */
+    .label-mini { font-size: 6.5vw; font-weight: 800; margin-top: 20px; }
+    .timer-mini { font-size: 15vw; font-weight: 900; font-family: 'Courier New', monospace; }
 
-    .social-footer { margin-top: auto; padding-bottom: 15px; }
+    .social-footer { margin-top: auto; padding-bottom: 20px; }
     .social-footer a {
         color: white !important; text-decoration: none; font-size: 14px;
-        padding: 8px 15px; background: rgba(0,0,0,0.2); border-radius: 15px;
+        padding: 8px 18px; background: rgba(0,0,0,0.3); border-radius: 20px;
         margin: 5px; border: 1px solid rgba(255,255,255,0.1);
     }
 </style>
@@ -82,7 +82,7 @@ lat, lon = 26.32, 43.97
 if location and 'coords' in location:
     lat, lon = location['coords']['latitude'], location['coords']['longitude']
 
-# استخدام الـ Placeholder لمنع تكرار العناصر وتجنب أخطاء الكود
+# استخدام الـ Placeholder لتجنب أخطاء تكرار العناصر (Duplicate Key)
 placeholder = st.empty()
 
 while True:
@@ -115,13 +115,14 @@ while True:
         if raw_t.startswith('0'): raw_t = raw_t[1:]
         ampm = now.strftime('%p')
 
+        # بناء الواجهة بدون تداخل نصوص الـ HTML
         st.markdown(f"""
             <div class='main-layout'>
                 <div class='unified-style time-main'>{raw_t}<span class='ampm-mini'>{ampm}</span></div>
                 <div class='unified-style date-mini'>{hij_str} | {mil_str}</div>
                 
-                <div class='adhan-box'>
-                    <span style='color:white; font-size:18px;'>🔔 أذان الحرم المكي الشريف</span>
+                <div class='adhan-container'>
+                    <div style='color:white; font-size:18px; font-weight:bold;'>🔔 أذان الحرم المكي الشريف</div>
                 </div>
 
                 <div class='unified-style label-mini'>متبقي على صلاة {next_p_name}</div>
@@ -134,8 +135,8 @@ while True:
             </div>
         """, unsafe_allow_html=True)
 
-        # زر التفعيل وضعته في الأسفل لمنع تداخل العناصر برمجياً
-        adhan_on = st.toggle("تفعيل التنبيه", value=True, key="fixed_adhan_toggle")
+        # زر التفعيل في الأسفل لتجنب الخطأ البرمجي
+        adhan_on = st.toggle("تفعيل صوت الأذان", value=True, key="unique_adhan_key")
         
         if play_now and adhan_on:
             st.markdown(f'<audio src="{ADHAN_URL}" autoplay></audio>', unsafe_allow_html=True)
