@@ -5,85 +5,92 @@ import time
 from hijri_converter import Gregorian
 from streamlit_js_eval import get_geolocation
 
-# استيراد مكتبة أوقات الصلاة
+# استيراد مكتبة الحسابات
 try:
     from prayer_times_calculator import PrayerTimesCalculator
 except ImportError:
     pass
 
-# إعداد الصفحة لإزالة أي خطوط بيضاء علوية
+# إعداد الصفحة لملء الشاشة وإخفاء الزوائد
 st.set_page_config(page_title="ساعة الصلاة - aale1164", layout="wide")
 
+# توقيت السعودية
 sa_tz = pytz.timezone('Asia/Riyadh')
 ADHAN_URL = "https://download.tvquran.com/download/Adhan/TVQuran.com_Adhan_1.mp3"
 
-# --- التصميم النهائي: معالجة نصوص الـ HTML وتوحيد الألوان ---
+# --- هندسة التصميم: إزالة الشوائب وتثبيت العناصر فوق الخلفية ---
 st.markdown("""
 <style>
-    /* إخفاء تام للعناصر العلوية والخطوط البيضاء */
-    header, footer, .stDeployButton, #MainMenu { visibility: hidden !important; height: 0; }
-    .block-container { padding: 0 !important; }
+    /* حذف الخطوط البيضاء وأشرطة ستريمليت تماماً */
+    header, footer, .stDeployButton, #MainMenu { visibility: hidden !important; height: 0; position: fixed; }
+    div.block-container { padding: 0 !important; margin: 0 !important; }
 
     .stApp {
         background: url("https://raw.githubusercontent.com/aale1164/flat-earth-clock./main/background.png");
         background-size: 100% 100%;
+        background-position: center;
+        background-repeat: no-repeat;
         background-attachment: fixed;
         direction: rtl;
-        font-family: 'Tajawal', sans-serif;
     }
 
-    .main-layout {
+    /* الحاوية الرئيسية للهيكل الجديد */
+    .master-container {
         display: flex;
         flex-direction: column;
         align-items: center;
         height: 100vh;
-        justify-content: flex-start;
-        padding-top: 3vh;
-    }
-
-    /* ستايل النصوص الموحد (أبيض بظل شفاف) */
-    .unified-style {
-        color: #FFFFFF !important;
-        text-shadow: 2px 2px 15px rgba(0,0,0,0.6); 
-        margin: 0;
-        line-height: 1.2;
+        width: 100vw;
         text-align: center;
+        justify-content: space-between;
+        padding: 5vh 0;
     }
 
-    .time-main { font-size: 16vw; font-weight: 900; }
-    .ampm-mini { font-size: 5vw; margin-right: 10px; color: #FFFFFF !important; }
-    .date-mini { font-size: 5vw; font-weight: 700; margin-top: 5px; }
+    /* ستايل النصوص الموحد (أبيض بظل مائي شفاف) */
+    .text-glow {
+        color: #FFFFFF !important;
+        text-shadow: 0px 0px 15px rgba(0,0,0,0.7); 
+        font-family: 'Tajawal', sans-serif;
+        line-height: 1.1;
+    }
+
+    /* الساعة فوق القمر ومصغرة */
+    .main-clock { font-size: 16vw; font-weight: 900; margin: 0; }
+    .ampm-label { font-size: 5vw; margin-right: 8px; }
+
+    /* التاريخ تحت الساعة مباشرة */
+    .date-label { font-size: 5vw; font-weight: 700; margin-top: -1vh; }
 
     /* حاوية الأذان في المنتصف */
-    .adhan-container {
-        margin: 12vh 0 5vh 0;
-        padding: 10px 25px;
-        background: rgba(255, 255, 255, 0.08);
+    .mid-section {
+        margin: 5vh 0;
+        background: rgba(255, 255, 255, 0.1);
+        padding: 10px 30px;
         border-radius: 50px;
         border: 1px solid rgba(255, 255, 255, 0.2);
     }
 
-    /* متبقي على الصلاة (نصوص موحدة) */
-    .label-mini { font-size: 6.5vw; font-weight: 800; margin-top: 20px; }
-    .timer-mini { font-size: 15vw; font-weight: 900; font-family: 'Courier New', monospace; }
+    /* متبقي على الصلاة في الأسفل وبنفس نمط الساعة */
+    .bottom-label { font-size: 6vw; font-weight: 800; }
+    .bottom-timer { font-size: 14vw; font-weight: 900; font-family: 'Courier New', monospace; }
 
-    .social-footer { margin-top: auto; padding-bottom: 20px; }
-    .social-footer a {
+    /* روابط التواصل */
+    .social-box a {
         color: white !important; text-decoration: none; font-size: 14px;
-        padding: 8px 18px; background: rgba(0,0,0,0.3); border-radius: 20px;
+        padding: 8px 15px; background: rgba(0,0,0,0.4); border-radius: 20px;
         margin: 5px; border: 1px solid rgba(255,255,255,0.1);
     }
 </style>
 """, unsafe_allow_html=True)
 
-# جلب الموقع
+# الحصول على الإحداثيات
 location = get_geolocation()
 lat, lon = 26.32, 43.97
 if location and 'coords' in location:
     lat, lon = location['coords']['latitude'], location['coords']['longitude']
 
-# استخدام الـ Placeholder لتجنب أخطاء تكرار العناصر (Duplicate Key)
-placeholder = st.empty()
+# Placeholder واحد للمحتوى بالكامل لتجنب أخطاء Duplicate Key
+content_space = st.empty()
 
 while True:
     now = datetime.now(sa_tz)
@@ -110,35 +117,13 @@ while True:
                 if curr_f == p_f: play_now = True
     except: pass
 
-    with placeholder.container():
+    with content_space.container():
         raw_t = now.strftime('%I:%M:%S')
         if raw_t.startswith('0'): raw_t = raw_t[1:]
         ampm = now.strftime('%p')
 
-        # بناء الواجهة بدون تداخل نصوص الـ HTML
+        # الهيكل البرمجي الصافي بدون تداخل الـ HTML
         st.markdown(f"""
-            <div class='main-layout'>
-                <div class='unified-style time-main'>{raw_t}<span class='ampm-mini'>{ampm}</span></div>
-                <div class='unified-style date-mini'>{hij_str} | {mil_str}</div>
-                
-                <div class='adhan-container'>
-                    <div style='color:white; font-size:18px; font-weight:bold;'>🔔 أذان الحرم المكي الشريف</div>
-                </div>
-
-                <div class='unified-style label-mini'>متبقي على صلاة {next_p_name}</div>
-                <div class='unified-style timer-mini'>{time_left}</div>
-
-                <div class='social-footer'>
-                    <a href='https://twitter.com/aale1164' target='_blank'>𝕏 @aale1164</a>
-                    <a href='https://www.snapchat.com/add/aale112' target='_blank'>👻 aale112</a>
-                </div>
-            </div>
-        """, unsafe_allow_html=True)
-
-        # زر التفعيل في الأسفل لتجنب الخطأ البرمجي
-        adhan_on = st.toggle("تفعيل صوت الأذان", value=True, key="unique_adhan_key")
-        
-        if play_now and adhan_on:
-            st.markdown(f'<audio src="{ADHAN_URL}" autoplay></audio>', unsafe_allow_html=True)
-
-    time.sleep(1)
+            <div class='master-container'>
+                <div class='top-box'>
+                    <div class='text-glow main-clock'>{raw_
