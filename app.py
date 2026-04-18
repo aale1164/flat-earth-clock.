@@ -13,22 +13,21 @@ except ImportError:
 
 st.set_page_config(page_title="ساعة الصلاة - aale1164", layout="centered")
 
-# إعدادات الوقت
+# توقيت السعودية ورابط الأذان
 sa_tz = pytz.timezone('Asia/Riyadh')
 ADHAN_URL = "https://download.tvquran.com/download/Adhan/TVQuran.com_Adhan_1.mp3"
 
-# --- تصميم "الاندماج الكامل": لا واجهة، فقط خلفية ونصوص ---
+# --- تصميم النصوص العائمة (بدون أي مربعات أو خلفيات) ---
 st.markdown("""
 <style>
-    /* حذف كل زوائد ستريمليت */
+    /* إخفاء واجهة ستريمليت والخطوط تماماً */
     header {visibility: hidden;}
     .stDeployButton {display:none;}
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
-    div.block-container {padding-top: 0rem;}
+    div.block-container {padding-top: 0rem; background: transparent;}
     
     .stApp {
-        /* إضاءة الخلفية كاملة (100%) لبروز الصورة */
         background: url("https://raw.githubusercontent.com/aale1164/flat-earth-clock./main/background.png");
         background-size: cover; 
         background-position: center;
@@ -37,80 +36,63 @@ st.markdown("""
         font-family: 'Tajawal', sans-serif;
     }
 
-    /* الحاوية للنصوص فقط */
-    .content-wrapper {
+    /* حاوية النصوص الشفافة */
+    .pure-content {
         text-align: center;
         background: transparent;
         margin-top: 10vh;
     }
 
-    /* الساعة: مدمجة مع الخلفية بتوهج بسيط */
+    /* الساعة */
     .time-val { 
-        font-size: 25vw; 
-        font-weight: 900; 
-        color: #FFFFFF; 
-        line-height: 0.8; 
-        text-shadow: 0 0 20px rgba(0,0,0,1), 0 0 10px rgba(255,255,255,0.3);
+        font-size: 24vw; font-weight: 900; color: #FFFFFF; 
+        line-height: 0.85; 
+        text-shadow: 0 0 30px rgba(0,0,0,1);
         margin: 0; 
     }
     .ampm-val { font-size: 8vw; color: #00FF00; font-weight: bold; }
 
-    /* التاريخ: لون مشع بسيط */
+    /* التاريخ */
     .date-val { 
-        font-size: 7vw; 
-        color: #FFA500; 
-        font-weight: 800; 
+        font-size: 7vw; color: #FFA500; font-weight: 800; 
         margin: 15px 0; 
-        text-shadow: 2px 2px 10px rgba(0,0,0,1);
+        text-shadow: 2px 2px 15px rgba(0,0,0,1);
     }
 
-    /* العداد التنازلي: عائم فوق الأرض */
-    .prayer-label-val { 
-        font-size: 30px; 
-        color: #FFFFFF; 
-        font-weight: 900; 
+    /* العداد التنازلي */
+    .prayer-label { 
+        font-size: 28px; color: #FFFFFF; font-weight: 900; 
         text-shadow: 2px 2px 10px rgba(0,0,0,1);
-        margin-top: 40px;
+        margin-top: 30px;
     }
     .timer-val { 
-        font-size: 18vw; 
-        color: #00FF00; 
-        font-weight: 900; 
+        font-size: 18vw; color: #00FF00; font-weight: 900; 
         font-family: 'Courier New', monospace; 
-        text-shadow: 0 0 20px rgba(0,0,0,1), 0 0 15px rgba(0,255,0,0.2);
+        text-shadow: 0 0 25px rgba(0,0,0,1);
     }
 
-    /* روابط التواصل */
-    .social-btns { margin-top: 60px; }
-    .social-btns a { 
-        color: white !important; 
-        text-decoration: none; 
-        font-weight: bold; 
-        padding: 10px 20px; 
-        background: rgba(0,0,0,0.3); /* شفافية عالية جداً للزر */
-        border-radius: 50px;
-        margin: 5px; 
-        border: 1px solid rgba(255,255,255,0.2);
-    }
-    
-    /* تنسيق زر الأذان ليكون أقل حدة */
-    .stToggle {
-        background: transparent !important;
+    /* الروابط السفلية */
+    .links-wrapper { margin-top: 50px; }
+    .links-wrapper a { 
+        color: white !important; text-decoration: none; 
+        font-weight: bold; padding: 10px 20px; 
+        background: rgba(255,255,255,0.1); border-radius: 50px;
+        margin: 5px; border: 1px solid rgba(255,255,255,0.2);
     }
 </style>
 """, unsafe_allow_html=True)
 
-# 1. جلب الموقع
+# 1. الموقع
 location = get_geolocation()
 lat, lon = 26.32, 43.97
 if location and 'coords' in location:
     lat, lon = location['coords']['latitude'], location['coords']['longitude']
 
-# 2. زر التنبيه (شفاف)
+# 2. التبديل (الأذان)
 st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)
-c1, c2, c3 = st.columns([1, 8, 1])
-with c2:
-    adhan_on = st.toggle("🔔 أذان الحرم المكي الشريف", value=True, key="pure_bg_toggle")
+col1, col2, col3 = st.columns([1, 8, 1])
+with col2:
+    adhan_on = st.toggle("🔔 أذان الحرم المكي", value=True, key="fixed_pure_toggle")
 
 placeholder = st.empty()
 
@@ -137,14 +119,29 @@ while True:
                     time_left = f"{h_v:02d}:{m_v:02d}:{s_v:02d}"
                     break
                 if curr_f == p_f: play_now = True
-    except: pass
+    except:
+        pass
 
     with placeholder.container():
         raw_t = now.strftime('%I:%M:%S')
         if raw_t.startswith('0'): raw_t = raw_t[1:]
         ampm = now.strftime('%p')
 
-        # عرض النصوص مباشرة فوق الخلفية
+        # النص العائم مباشرة على الخلفية
         st.markdown(f"""
-            <div class='content-wrapper'>
-                <div class='time-val'>{raw_t}<span
+            <div class='pure-content'>
+                <div class='time-val'>{raw_t}<span class='ampm-val'>{ampm}</span></div>
+                <div class='date-val'>{hij_str} | {mil_str}</div>
+                <div class='prayer-label'>متبقي على صلاة {next_p_name}</div>
+                <div class='timer-val'>{time_left}</div>
+                <div class='links-wrapper'>
+                    <a href='https://twitter.com/aale1164' target='_blank'>𝕏 @aale1164</a>
+                    <a href='https://www.snapchat.com/add/aale112' target='_blank'>👻 aale112</a>
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
+        
+        if play_now and adhan_on:
+            st.markdown(f'<audio src="{ADHAN_URL}" autoplay></audio>', unsafe_allow_html=True)
+
+    time.sleep(1)
