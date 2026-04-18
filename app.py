@@ -11,88 +11,104 @@ try:
 except ImportError:
     pass
 
-st.set_page_config(page_title="ساعة الصلاة - aale1164", layout="centered")
+# إعداد الصفحة لملء الشاشة
+st.set_page_config(page_title="ساعة الصلاة - aale1164", layout="wide")
 
-# توقيت السعودية ورابط الأذان
 sa_tz = pytz.timezone('Asia/Riyadh')
 ADHAN_URL = "https://download.tvquran.com/download/Adhan/TVQuran.com_Adhan_1.mp3"
 
-# --- تصميم النصوص العائمة (بدون أي مربعات أو خلفيات) ---
+# --- التصميم النهائي: إزالة الخطوط، ملء الشاشة، نصوص عائمة ثابتة ---
 st.markdown("""
 <style>
-    /* إخفاء واجهة ستريمليت والخطوط تماماً */
-    header {visibility: hidden;}
-    .stDeployButton {display:none;}
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    div.block-container {padding-top: 0rem; background: transparent;}
+    /* 1. حذف الخط الأبيض العلوي وكل زوائد المنصة تماماً */
+    header, footer, .stDeployButton, #MainMenu {
+        visibility: hidden !important;
+        height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
     
+    /* 2. جعل التطبيق يملأ الشاشة بالكامل بدون هوامش */
+    .block-container {
+        padding: 0 !important;
+        margin: 0 !important;
+        max-width: 100% !important;
+    }
+
     .stApp {
-        background: url("https://raw.githubusercontent.com/aale1164/flat-earth-clock./main/background.png");
-        background-size: cover; 
+        background: linear-gradient(rgba(0,0,0,0.1), rgba(0,0,0,0.1)), 
+                    url("https://raw.githubusercontent.com/aale1164/flat-earth-clock./main/background.png");
+        background-size: 100% 100%; /* جعل الخلفية بنفس حجم الواجهة بالضبط */
         background-position: center;
+        background-repeat: no-repeat;
         background-attachment: fixed;
         direction: rtl; 
         font-family: 'Tajawal', sans-serif;
     }
 
-    /* حاوية النصوص الشفافة */
-    .pure-content {
+    /* 3. تثبيت المحتوى في منتصف الشاشة كلياً */
+    .main-wrapper {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        height: 100vh; /* ملء ارتفاع الشاشة */
         text-align: center;
-        background: transparent;
-        margin-top: 10vh;
     }
 
-    /* الساعة */
+    /* 4. تنسيق الساعة (ثابتة وعائمة) */
     .time-val { 
-        font-size: 24vw; font-weight: 900; color: #FFFFFF; 
-        line-height: 0.85; 
-        text-shadow: 0 0 30px rgba(0,0,0,1);
-        margin: 0; 
+        font-size: 25vw; 
+        font-weight: 900; 
+        color: #FFFFFF; 
+        line-height: 0.8; 
+        text-shadow: 0px 0px 30px rgba(0,0,0,1); /* ظل عميق للوضوح */
+        margin: 0;
     }
     .ampm-val { font-size: 8vw; color: #00FF00; font-weight: bold; }
 
-    /* التاريخ */
     .date-val { 
-        font-size: 7vw; color: #FFA500; font-weight: 800; 
-        margin: 15px 0; 
-        text-shadow: 2px 2px 15px rgba(0,0,0,1);
+        font-size: 7vw; 
+        color: #FFA500; 
+        font-weight: 800; 
+        margin: 15px 0;
+        text-shadow: 0px 0px 15px rgba(0,0,0,1);
     }
 
-    /* العداد التنازلي */
-    .prayer-label { 
+    .prayer-title { 
         font-size: 28px; color: #FFFFFF; font-weight: 900; 
-        text-shadow: 2px 2px 10px rgba(0,0,0,1);
-        margin-top: 30px;
+        text-shadow: 0px 0px 10px rgba(0,0,0,1);
+        margin-top: 20px;
     }
-    .timer-val { 
+    .prayer-timer-val { 
         font-size: 18vw; color: #00FF00; font-weight: 900; 
-        font-family: 'Courier New', monospace; 
-        text-shadow: 0 0 25px rgba(0,0,0,1);
+        font-family: 'Courier New', monospace;
+        text-shadow: 0px 0px 20px rgba(0,0,0,1);
     }
 
-    /* الروابط السفلية */
-    .links-wrapper { margin-top: 50px; }
-    .links-wrapper a { 
-        color: white !important; text-decoration: none; 
-        font-weight: bold; padding: 10px 20px; 
-        background: rgba(255,255,255,0.1); border-radius: 50px;
+    /* روابط التواصل */
+    .footer-links { margin-top: 30px; }
+    .footer-links a { 
+        color: white !important; text-decoration: none; font-weight: bold; 
+        padding: 10px 20px; background: rgba(0,0,0,0.4); border-radius: 20px;
         margin: 5px; border: 1px solid rgba(255,255,255,0.2);
     }
+
+    /* تنسيق زر التبديل ليكون شفافاً */
+    .stToggle { background: transparent !important; }
 </style>
 """, unsafe_allow_html=True)
 
-# 1. الموقع
+# الموقع
 location = get_geolocation()
 lat, lon = 26.32, 43.97
 if location and 'coords' in location:
     lat, lon = location['coords']['latitude'], location['coords']['longitude']
 
-# 2. التبديل (الأذان)
-st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)
-col1, col2, col3 = st.columns([1, 8, 1])
-with col2:
-    adhan_on = st.toggle("🔔 أذان الحرم المكي", value=True, key="fixed_pure_toggle")
+# زر الأذان (مخفي بذكاء)
+st.markdown("<div style='position: fixed; top: 10px; right: 10px; z-index: 1000;'>", unsafe_allow_html=True)
+adhan_on = st.toggle("🔔 أذان", value=True, key="ultimate_toggle")
+st.markdown("</div>", unsafe_allow_html=True)
 
 placeholder = st.empty()
 
@@ -119,22 +135,20 @@ while True:
                     time_left = f"{h_v:02d}:{m_v:02d}:{s_v:02d}"
                     break
                 if curr_f == p_f: play_now = True
-    except:
-        pass
+    except: pass
 
     with placeholder.container():
         raw_t = now.strftime('%I:%M:%S')
         if raw_t.startswith('0'): raw_t = raw_t[1:]
         ampm = now.strftime('%p')
 
-        # النص العائم مباشرة على الخلفية
         st.markdown(f"""
-            <div class='pure-content'>
+            <div class='main-wrapper'>
                 <div class='time-val'>{raw_t}<span class='ampm-val'>{ampm}</span></div>
                 <div class='date-val'>{hij_str} | {mil_str}</div>
-                <div class='prayer-label'>متبقي على صلاة {next_p_name}</div>
-                <div class='timer-val'>{time_left}</div>
-                <div class='links-wrapper'>
+                <div class='prayer-title'>متبقي على صلاة {next_p_name}</div>
+                <div class='prayer-timer-val'>{time_left}</div>
+                <div class='footer-links'>
                     <a href='https://twitter.com/aale1164' target='_blank'>𝕏 @aale1164</a>
                     <a href='https://www.snapchat.com/add/aale112' target='_blank'>👻 aale112</a>
                 </div>
