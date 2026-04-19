@@ -74,7 +74,7 @@ if 'lat' not in st.session_state:
     st.session_state.lat, st.session_state.lon = 26.32, 43.97
     st.session_state.location_checked = False
 
-# --- صفحة طلب إذن الموقع ---
+# --- صفحة طلب إذن الموقع (نص جديد) ---
 if not st.session_state.location_checked and GEO_LIB_AVAILABLE:
     st.markdown("""
     <style>
@@ -93,10 +93,11 @@ if not st.session_state.location_checked and GEO_LIB_AVAILABLE:
     </style>
     <div class="permission-box">
         <h1>🌍 أهلاً بك</h1>
-        <p style="font-size: 18px;">هذا التطبيق إصدار تجريبي ونستقبل مقترحاتكم</p>
-        <p style="font-size: 16px; margin-top: 5px;">أخوكم / عدناني</p>
-        <p style="font-size: 14px; margin-top: 20px; opacity: 0.8;">هذا التصميم مسجل في الهيئة الملكية الفكرية وأي محاولة لاستنساخه سوف تعرضك للمسائلة القانونية</p>
-        <p style="font-size: 16px; margin-top: 20px;">للحصول على مواقيت الصلاة والطقس بدقة، نرجو الموافقة على مشاركة موقعك.</p>
+        <p style="font-size: 18px;">هذا التطبيق نسخة تجريبية، شاركونا آرائكم واقتراحاتكم</p>
+        <p style="font-size: 18px;">لكي نجعله يتناسب مع احتياجاتكم</p>
+        <p style="font-size: 16px; margin-top: 15px;">من خلال الضغط على وسائل التواصل في الصفحة التالية في جهة اليمين</p>
+        <p style="font-size: 18px; margin-top: 25px;">دمتم بخير، أخوكم / عدناني</p>
+        <p style="font-size: 16px; margin-top: 30px;">للحصول على مواقيت الصلاة والطقس بدقة، نرجو الموافقة على مشاركة موقعك.</p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -163,7 +164,7 @@ season_ar, season_en, days_left, season_icon = get_season_data()
 
 prayer_json = json.dumps(prayer_dict, ensure_ascii=False)
 
-# --- HTML + CSS + JavaScript (التصميم النهائي) ---
+# --- HTML + CSS + JavaScript (التصميم النهائي مع محاذاة الأعمدة) ---
 html_code = f"""
 <!DOCTYPE html>
 <html dir="rtl">
@@ -177,7 +178,7 @@ html_code = f"""
             font-family: 'Tajawal', sans-serif;
             background: url("https://raw.githubusercontent.com/aale1164/flat-earth-clock./main/background.png");
             background-size: cover;
-            background-position: center 20%;  /* يظهر الجزء العلوي من الصورة (الأرض) */
+            background-position: center 40%;  /* يظهر الأفق في المنتصف تقريباً */
             background-attachment: fixed;
             min-height: 100dvh;
             display: flex;
@@ -223,7 +224,7 @@ html_code = f"""
             font-weight: 700;
         }}
 
-        /* سطر متبقي على الصيف (بدلاً من الصلاة) */
+        /* سطر متبقي على الصيف */
         .season-main {{
             font-size: clamp(1.5rem, 6vw, 2.4rem);
             font-weight: 700;
@@ -238,7 +239,7 @@ html_code = f"""
             margin-top: 2px;
         }}
 
-        /* صف المعلومات (عمودين متساويين) */
+        /* صف المعلومات (عمودين مع محاذاة مختلفة) */
         .info-row {{
             display: flex;
             flex-direction: row;
@@ -257,7 +258,15 @@ html_code = f"""
             text-align: center;
         }}
 
-        /* العمود الأيمن (اليوم والتواريخ + روابط التواصل) */
+        /* العمود الأيمن: يميل إلى اليمين قليلاً */
+        .right-col {{
+            padding-left: 8%;
+        }}
+        /* العمود الأيسر: يميل إلى اليسار قليلاً */
+        .left-col {{
+            padding-right: 8%;
+        }}
+
         .day-ar {{ font-size: clamp(1.8rem, 7vw, 2.8rem); font-weight: 900; }}
         .day-en {{ font-size: clamp(1.1rem, 4.5vw, 1.8rem); opacity: 0.85; margin-top: 2px; }}
         .hijri-date {{ font-size: clamp(1.3rem, 5.5vw, 2rem); font-weight: 700; margin-top: 10px; }}
@@ -283,16 +292,17 @@ html_code = f"""
             transform: scale(1.05);
         }}
 
-        /* العمود الأيسر (الطقس والشروق والغروب) */
+        /* العمود الأيسر (الطقس) */
         .weather-item {{ margin: 8px 0; }}
         .weather-title {{ font-size: clamp(1.2rem, 5vw, 1.8rem); font-weight: bold; }}
         .weather-value {{ font-size: clamp(1rem, 4.5vw, 1.5rem); margin-top: 3px; }}
         .weather-label {{ font-size: clamp(0.8rem, 3.5vw, 1.1rem); opacity: 0.7; display: block; margin-top: 2px; }}
 
-        /* للشاشات الصغيرة */
         @media (max-width: 480px) {{
             body {{ padding: 4vh 12px 0 12px; }}
             .info-row {{ gap: 8px; }}
+            .right-col {{ padding-left: 5%; }}
+            .left-col {{ padding-right: 5%; }}
         }}
     </style>
 </head>
@@ -304,30 +314,29 @@ html_code = f"""
             <span id="live-ampm" class="ampm-display"></span>
         </div>
 
-        <!-- متبقي على الصيف (بدلاً من سطر الصلاة) -->
+        <!-- متبقي على الصيف -->
         <div class="text-shadow season-main">
             {season_icon} متبقي على {season_ar}: {days_left} يوم
             <span class="season-main-sub">{days_left} days left for {season_en}</span>
         </div>
 
-        <!-- صف المعلومات (عمودين) -->
+        <!-- صف المعلومات (عمودين مع محاذاة مختلفة) -->
         <div class="info-row">
-            <!-- العمود الأيمن: اليوم والتواريخ + روابط التواصل -->
-            <div class="info-col">
+            <!-- العمود الأيمن: التاريخ + روابط التواصل (يميل لليمين) -->
+            <div class="info-col right-col">
                 <div class="text-shadow day-ar">{day_ar}</div>
                 <div class="text-shadow day-en">{day_en}</div>
                 <div class="text-shadow hijri-date">{hij_str}</div>
                 <div class="text-shadow miladi-date">{mil_str}</div>
 
-                <!-- روابط التواصل عمودية أسفل التاريخ -->
                 <div class="social-links-vertical">
                     <a href="https://twitter.com/aale1164" target="_blank">𝕏 @aale1164</a>
                     <a href="https://www.snapchat.com/add/aale112" target="_blank">👻 aale112</a>
                 </div>
             </div>
 
-            <!-- العمود الأيسر: الطقس والشروق والغروب -->
-            <div class="info-col">
+            <!-- العمود الأيسر: الطقس والشروق والغروب (يميل لليسار) -->
+            <div class="info-col left-col">
                 <div class="weather-item">
                     <div class="text-shadow weather-title">🌡️ {weather_str}</div>
                     <div class="text-shadow weather-label">Temp</div>
@@ -344,8 +353,6 @@ html_code = f"""
                 </div>
             </div>
         </div>
-
-        <!-- لا يوجد سطر فصل إضافي -->
     </div>
 
     <script>
