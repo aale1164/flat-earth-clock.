@@ -91,6 +91,13 @@ if GEO_LIB_AVAILABLE:
 now = datetime.now(sa_tz)
 today = now.date()
 
+# أيام الأسبوع
+weekdays_ar = ['الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت', 'الأحد']
+weekdays_en = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+# now.weekday() يعيد 0=الإثنين
+wd_ar = weekdays_ar[now.weekday()]
+wd_en = weekdays_en[now.weekday()]
+
 # التاريخ الهجري
 try:
     h = Gregorian.fromdate(today).to_hijri()
@@ -112,7 +119,7 @@ season_ar, season_en, days_left, season_icon = get_season_data()
 # تمرير بيانات الصلاة إلى JavaScript بصيغة JSON
 prayer_json = json.dumps(prayer_dict, ensure_ascii=False)
 
-# --- كود HTML + CSS + JavaScript (محسَّن للهواتف) ---
+# --- كود HTML + CSS + JavaScript (معدل بدقة حسب الطلب) ---
 html_code = f"""
 <!DOCTYPE html>
 <html dir="rtl">
@@ -138,11 +145,11 @@ html_code = f"""
             align-items: center;
             color: white;
             overflow: hidden;
-            padding: 5vh 16px 0 16px;
+            padding: 3vh 16px 0 16px;
         }}
         .main-container {{
             width: 100%;
-            max-width: 600px;  /* عرض مناسب للهواتف */
+            max-width: 600px;
             height: 100%;
             display: flex;
             flex-direction: column;
@@ -155,21 +162,44 @@ html_code = f"""
             margin: 0;
             line-height: 1.3;
         }}
-        /* استخدام clamp لخطوط متجاوبة تماماً */
+        
+        /* الوقت أصغر حجماً */
+        .time-wrapper {{
+            display: flex;
+            align-items: baseline;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 5px;
+        }}
         .time-display {{
-            font-size: clamp(4rem, 18vw, 8rem);
+            font-size: clamp(3rem, 15vw, 6rem);
             font-weight: 900;
             line-height: 1;
         }}
         .ampm-display {{
-            font-size: clamp(1.2rem, 6vw, 2.5rem);
+            font-size: clamp(1rem, 5vw, 2rem);
             margin-right: 8px;
             color: #FFD966;
+            font-weight: 700;
         }}
+        
+        /* أيام الأسبوع */
+        .weekday {{
+            font-size: clamp(1.2rem, 5vw, 2rem);
+            font-weight: 700;
+            opacity: 0.95;
+            margin-bottom: 2px;
+        }}
+        .weekday-sub {{
+            font-size: clamp(0.9rem, 3.5vw, 1.3rem);
+            opacity: 0.7;
+            display: block;
+        }}
+        
         .info-line {{
             font-size: clamp(1.2rem, 5.5vw, 2.2rem);
             font-weight: 700;
-            margin-top: 6px;
+            margin-top: 4px;
             opacity: 0.9;
         }}
         .prayer-line {{
@@ -185,43 +215,65 @@ html_code = f"""
             display: block;
             margin-top: 2px;
         }}
-        /* صندوق البيانات - يتكيف مع الشاشات الصغيرة */
-        .data-bar {{
+        
+        /* شريط الشروق والغروب فقط */
+        .sun-bar {{
             display: flex;
             flex-wrap: wrap;
             justify-content: center;
             align-items: center;
-            gap: 16px 24px;
-            margin-top: 25px;
+            gap: 20px 30px;
+            margin-top: 20px;
             background: rgba(20, 20, 20, 0.25);
-            padding: 14px 24px;
+            padding: 12px 28px;
             border-radius: 60px;
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.2);
             width: fit-content;
             max-width: 100%;
         }}
-        .data-item {{
+        .sun-item {{
             font-size: clamp(1.1rem, 5vw, 2rem);
             font-weight: bold;
             color: #FFFFFF;
             text-align: center;
             line-height: 1.4;
             opacity: 0.95;
-            min-width: 100px;
         }}
-        .data-label {{
+        .sun-label {{
             font-size: clamp(0.7rem, 3vw, 1.1rem);
             font-weight: normal;
             opacity: 0.7;
             display: block;
             margin-top: 2px;
         }}
+        
+        /* مستطيل درجة الحرارة في الأسفل */
+        .temp-box {{
+            margin-top: 25px;
+            background: rgba(20, 20, 20, 0.3);
+            padding: 10px 30px;
+            border-radius: 40px;
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            display: inline-block;
+        }}
+        .temp-value {{
+            font-size: clamp(1.3rem, 6vw, 2.2rem);
+            font-weight: bold;
+            color: #FFD966;
+        }}
+        .temp-label {{
+            font-size: clamp(0.8rem, 3.5vw, 1.2rem);
+            opacity: 0.7;
+            margin-right: 8px;
+        }}
+        
         /* سطر الفصل */
         .season-line {{
             font-size: clamp(1.2rem, 5.5vw, 2.2rem);
             font-weight: 700;
-            margin-top: 30px;
+            margin-top: 15px;
             opacity: 0.9;
         }}
         .season-sub {{
@@ -230,7 +282,8 @@ html_code = f"""
             font-weight: normal;
             display: block;
         }}
-        /* روابط التواصل - أكبر ليسهل اللمس */
+        
+        /* روابط التواصل */
         .social-footer {{
             margin-top: auto;
             padding-bottom: 20px;
@@ -258,21 +311,19 @@ html_code = f"""
             border-color: #FFA500;
         }}
 
-        /* تحسينات خاصة بالهواتف الصغيرة (أقل من 480px) */
+        /* تحسينات للهواتف الصغيرة */
         @media (max-width: 480px) {{
             body {{
-                padding: 4vh 12px 0 12px;
+                padding: 2vh 12px 0 12px;
             }}
-            .data-bar {{
+            .sun-bar {{
                 flex-direction: column;
-                gap: 12px;
-                padding: 16px 20px;
+                gap: 10px;
+                padding: 12px 20px;
                 width: 90%;
-                border-radius: 40px;
             }}
-            .data-item {{
-                min-width: auto;
-                width: 100%;
+            .temp-box {{
+                padding: 8px 24px;
             }}
             .social-footer {{
                 padding-bottom: 15px;
@@ -281,30 +332,32 @@ html_code = f"""
                 padding: 10px 18px;
             }}
             .time-display {{
-                font-size: clamp(3.5rem, 20vw, 6rem);
+                font-size: clamp(2.8rem, 18vw, 5rem);
             }}
         }}
-
-        /* للشاشات المتوسطة والكبيرة (تابلت) */
+        
         @media (min-width: 768px) {{
             .main-container {{
                 max-width: 700px;
-            }}
-            .data-bar {{
-                padding: 16px 40px;
             }}
         }}
     </style>
 </head>
 <body>
     <div class="main-container">
-        <!-- الوقت المباشر -->
-        <div class="unified-text time-display">
-            <span id="live-time">--:--:--</span>
-            <span id="live-ampm" class="ampm-display"></span>
+        <!-- الوقت مع AM/PM بجانبه مباشرة -->
+        <div class="time-wrapper">
+            <span class="time-display" id="live-time">--:--:--</span>
+            <span class="ampm-display" id="live-ampm"></span>
         </div>
 
-        <!-- التاريخ -->
+        <!-- أيام الأسبوع -->
+        <div class="unified-text weekday">
+            {wd_ar}
+            <span class="weekday-sub">{wd_en}</span>
+        </div>
+
+        <!-- التاريخ الهجري والميلادي -->
         <div class="unified-text info-line">{hij_str} | {mil_str}</div>
 
         <!-- متبقي على الصلاة -->
@@ -313,17 +366,22 @@ html_code = f"""
             <span class="eng-sub" id="next-prayer-eng">Time to --: --:--:--</span>
         </div>
 
-        <!-- صندوق الطقس والشروق والغروب -->
-        <div class="data-bar">
-            <div class="data-item">🌡️ {weather_str}<span class="data-label">Temp</span></div>
-            <div class="data-item">☀️ الشروق: {sunrise}<span class="data-label">Sunrise</span></div>
-            <div class="data-item">🌅 الغروب: {sunset}<span class="data-label">Sunset</span></div>
+        <!-- شريط الشروق والغروب فقط (بدون درجة الحرارة) -->
+        <div class="sun-bar">
+            <div class="sun-item">☀️ الشروق: {sunrise}<span class="sun-label">Sunrise</span></div>
+            <div class="sun-item">🌅 الغروب: {sunset}<span class="sun-label">Sunset</span></div>
         </div>
 
         <!-- سطر الفصل -->
         <div class="unified-text season-line">
             {season_icon} متبقي على {season_ar}: {days_left} يوم
             <span class="season-sub">{days_left} days left for {season_en}</span>
+        </div>
+
+        <!-- درجة الحرارة في مستطيل منفصل بالأسفل -->
+        <div class="temp-box">
+            <span class="temp-label">🌡️ درجة الحرارة</span>
+            <span class="temp-value">{weather_str}</span>
         </div>
 
         <!-- روابط التواصل -->
@@ -340,7 +398,6 @@ html_code = f"""
         function updateClock() {{
             const now = new Date();
 
-            // تحويل الوقت إلى توقيت الرياض
             const formatter = new Intl.DateTimeFormat('en-US', {{
                 timeZone: TIMEZONE,
                 hour: 'numeric',
@@ -359,7 +416,6 @@ html_code = f"""
             const month = parseInt(timeObj.month) - 1;
             const day = parseInt(timeObj.day);
 
-            // تنسيق الوقت 12 ساعة
             const hour12 = hour % 12 || 12;
             const ampmAr = hour >= 12 ? 'م' : 'ص';
             const ampmEn = hour >= 12 ? 'PM' : 'AM';
@@ -368,7 +424,6 @@ html_code = f"""
                 `${{hour12}}:${{minute.toString().padStart(2, '0')}}:${{second.toString().padStart(2, '0')}}`;
             document.getElementById('live-ampm').textContent = `${{ampmAr}} / ${{ampmEn}}`;
 
-            // حساب الصلاة القادمة
             const prayers = [
                 {{ ar: 'الفجر', en: 'Fajr', time: prayerTimes.Fajr }},
                 {{ ar: 'الظهر', en: 'Dhuhr', time: prayerTimes.Dhuhr }},
@@ -384,7 +439,6 @@ html_code = f"""
                 const [pHour, pMinute] = nextPrayer.time.split(':').map(Number);
                 let prayerDate = new Date(year, month, day, pHour, pMinute, 0);
 
-                // إذا كانت الصلاة القادمة هي الفجر ونحن بعد العشاء -> نضيف يوم
                 if (nextPrayer === prayers[0] && currentTimeStr > (prayers[4].time || "23:59")) {{
                     prayerDate.setDate(prayerDate.getDate() + 1);
                 }}
@@ -405,7 +459,6 @@ html_code = f"""
             }}
         }}
 
-        // تحديث فوري ثم كل ثانية
         updateClock();
         setInterval(updateClock, 1000);
     </script>
@@ -413,5 +466,5 @@ html_code = f"""
 </html>
 """
 
-# عرض المكون - height يعتمد على حجم الشاشة عبر vh في css
+# عرض المكون
 components.html(html_code, height=950, scrolling=False)
