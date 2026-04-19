@@ -5,7 +5,6 @@ from datetime import datetime, date, timedelta
 import requests
 from hijri_converter import Gregorian
 import json
-from aladhan import AlAdhan, Date, Location, Method, School
 
 # --- إعداد الصفحة ---
 st.set_page_config(page_title="ساعة الأرض - aale1164", layout="wide")
@@ -29,6 +28,33 @@ def fetch_weather_cached(lat, lon):
     except:
         return None
 
+@st.cache_data(ttl=3600)
+def fetch_prayer_times_cached(lat, lon, date_str):
+    """جلب مواقيت الصلاة من AlAdhan API باستخدام requests"""
+    try:
+        url = f"https://api.aladhan.com/v1/timings/{date_str}"
+        params = {
+            'latitude': lat,
+            'longitude': lon,
+            'method': 4,  # مكة المكرمة (Umm al-Qura)
+            'school': 0,   # شافعي (الافتراضي)
+        }
+        response = requests.get(url, params=params, timeout=10)
+        data = response.json()
+        if data['code'] == 200:
+            timings = data['data']['timings']
+            return {
+                'Fajr': timings['Fajr'],
+                'Sunrise': timings['Sunrise'],
+                'Dhuhr': timings['Dhuhr'],
+                'Asr': timings['Asr'],
+                'Maghrib': timings['Maghrib'],
+                'Isha': timings['Isha'],
+            }
+    except:
+        pass
+    return None
+
 def get_season_data():
     today = date.today()
     y = today.year
@@ -44,12 +70,12 @@ def get_season_data():
     next_spring = date(y + 1, 3, 21)
     return 'الربيع', 'Spring', (next_spring - today).days, '🌸'
 
-# --- الحصول على الإحداثيات (مع طلب الإذن مرة واحدة) ---
+# --- إدارة حالة الموقع الجغرافي ---
 if 'lat' not in st.session_state:
     st.session_state.lat, st.session_state.lon = 26.32, 43.97  # افتراضي: بريدة
     st.session_state.location_checked = False
 
-# --- صفحة البداية لطلب الإذن ---
+# --- صفحة طلب إذن الموقع (تظهر مرة واحدة) ---
 if not st.session_state.location_checked and GEO_LIB_AVAILABLE:
     st.markdown("""
     <style>
@@ -71,24 +97,28 @@ if not st.session_state.location_checked and GEO_LIB_AVAILABLE:
         <p style="font-size: 18px;">للحصول على مواقيت الصلاة والطقس بدقة، نرجو الموافقة على مشاركة موقعك.</p>
     </div>
     """, unsafe_allow_html=True)
-    
-    if st.button("📍 مشاركة الموقع", type="primary", use_container_width=False):
-        try:
-            loc = get_geolocation()
-            if loc and 'coords' in loc:
-                st.session_state.lat = loc['coords']['latitude']
-                st.session_state.lon = loc['coords']['longitude']
+
+    col1, col2, col3 = st.columns([1,2,1])
+    with col2:
+        if st.button("📍 مشاركة الموقع", type="primary", use_container_width=True):
+            try:
+                loc = get_geolocation()
+                if loc and 'coords' in loc:
+                    st.session_state.lat = loc['coords']['latitude']
+                    st.session_state.lon = loc['coords']['longitude']
+                else:
+                    st.warning("تعذر الحصول على الموقع. سيتم استخدام الموقع الافتراضي.")
                 st.session_state.location_checked = True
                 st.rerun()
-            else:
-                st.error("تعذر الحصول على الموقع. سيتم استخدام الموقع الافتراضي.")
+            except Exception as e:
+                st.error(f"حدث خطأ: {e}")
                 st.session_state.location_checked = True
                 st.rerun()
-        except Exception as e:
-            st.error(f"حدث خطأ: {e}. سيتم استخدام الموقع الافتراضي.")
-            st.session_state.location_checked = True
-            st.rerun()
-    st.stop()  # إيقاف التنفيذ حتى يتم الضغط على الزر
+    st.stop()
+
+# --- إذا لم تصلنا الإحداثيات بعد، استخدم الافتراضي ---
+if not st.session_state.location_checked:
+    st.session_state.location_checked = True
 
 # --- البيانات الأساسية (تحسب مرة واحدة عند التحميل) ---
 now = datetime.now(sa_tz)
@@ -106,34 +136,20 @@ mil_str = f"{today.day}/{today.month}/{today.year} M"
 temp = fetch_weather_cached(st.session_state.lat, st.session_state.lon)
 weather_str = f"{temp}°C" if temp is not None else "--°C"
 
-# --- جلب مواقيت الصلاة من AlAdhan API ---
-def get_prayer_times_aladhan(lat, lon, now):
-    sunrise = sunset = "--:--"
-    prayer_dict = {}
-    try:
-        client = AlAdhan()
-        location = Location(lat, lon)
-        prayer_times = client.get_prayer_times(
-            date=Date.today(),
-            location=location,
-            method=Method.MAKKAH,
-            school=School.SHAFI
-        )
-        timings = prayer_times.timings
-        sunrise = timings.sunrise.strftime("%H:%M")
-        sunset = timings.sunset.strftime("%H:%M")
-        prayer_dict = {
-            'الفجر': timings.fajr.strftime("%H:%M"),
-            'الظهر': timings.dhuhr.strftime("%H:%M"),
-            'العصر': timings.asr.strftime("%H:%M"),
-            'المغرب': timings.maghrib.strftime("%H:%M"),
-            'العشاء': timings.isha.strftime("%H:%M")
-        }
-    except Exception as e:
-        st.warning(f"تعذر جلب مواقيت الصلاة من AlAdhan: {e}")
-    return sunrise, sunset, prayer_dict
-
-sunrise, sunset, prayer_dict = get_prayer_times_aladhan(st.session_state.lat, st.session_state.lon, now)
+# جلب مواقيت الصلاة من AlAdhan API
+prayer_times_data = fetch_prayer_times_cached(st.session_state.lat, st.session_state.lon, today.strftime("%d-%m-%Y"))
+sunrise = sunset = "--:--"
+prayer_dict = {}
+if prayer_times_data:
+    sunrise = prayer_times_data.get('Sunrise', '--:--')
+    sunset = prayer_times_data.get('Maghrib', '--:--')
+    prayer_dict = {
+        'الفجر': prayer_times_data.get('Fajr', '--:--'),
+        'الظهر': prayer_times_data.get('Dhuhr', '--:--'),
+        'العصر': prayer_times_data.get('Asr', '--:--'),
+        'المغرب': prayer_times_data.get('Maghrib', '--:--'),
+        'العشاء': prayer_times_data.get('Isha', '--:--')
+    }
 
 # الفصل
 season_ar, season_en, days_left, season_icon = get_season_data()
@@ -175,7 +191,7 @@ html_code = f"""
             font-size: clamp(0.9rem, 3.5vw, 1.3rem); opacity: 0.8; font-weight: 400;
             display: block; margin-top: 2px;
         }}
-        /* صندوق البيانات */
+        /* صندوق البيانات - محسّن */
         .data-bar {{
             display: flex; flex-wrap: wrap; justify-content: center; align-items: center;
             gap: 12px 20px; margin-top: 25px; background: rgba(20, 20, 20, 0.25);
