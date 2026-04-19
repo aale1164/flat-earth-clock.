@@ -5,9 +5,10 @@ from datetime import datetime, date, timedelta
 import requests
 from hijri_converter import Gregorian
 import json
+import base64
 
-# --- إعداد الصفحة ---
-st.set_page_config(page_title="الارض المسطحة", page_icon="🧭", layout="wide")# محاولة استيراد مكتبة الموقع الجغرافي
+st.set_page_config(page_title="ساعة الأرض - aale1164", layout="wide")
+
 try:
     from streamlit_js_eval import get_geolocation
     GEO_LIB_AVAILABLE = True
@@ -30,12 +31,7 @@ def fetch_weather_cached(lat, lon):
 def fetch_prayer_times_cached(lat, lon, date_str):
     try:
         url = f"https://api.aladhan.com/v1/timings/{date_str}"
-        params = {
-            'latitude': lat,
-            'longitude': lon,
-            'method': 4,  # مكة المكرمة
-            'school': 0,
-        }
+        params = {'latitude': lat, 'longitude': lon, 'method': 4, 'school': 0}
         response = requests.get(url, params=params, timeout=10)
         data = response.json()
         if data['code'] == 200:
@@ -52,27 +48,105 @@ def fetch_prayer_times_cached(lat, lon, date_str):
         pass
     return None
 
-def get_season_data():
+def get_tawalee_data():
     today = date.today()
     y = today.year
-    seasons = [
-        ('الربيع', 'Spring', date(y, 3, 21), '🌸'),
-        ('الصيف', 'Summer', date(y, 6, 21), '☀️'),
-        ('الخريف', 'Autumn', date(y, 9, 23), '🍂'),
-        ('الشتاء', 'Winter', date(y, 12, 21), '❄️')
+    tawalee = [
+        ("المربعانية", date(y, 12, 7), "❄️"),
+        ("الشبط", date(y + (1 if today > date(y, 1, 15) else 0), 1, 15), "🌬️"),
+        ("العقارب", date(y + (1 if today > date(y, 2, 10) else 0), 2, 10), "🦂"),
+        ("الحميمين", date(y + (1 if today > date(y, 3, 21) else 0), 3, 21), "⛈️"),
+        ("الذرعان", date(y + (1 if today > date(y, 4, 16) else 0), 4, 16), "🌡️"),
+        ("الكنة", date(y + (1 if today > date(y, 4, 29) else 0), 4, 29), "🔥"),
+        ("الثريا", date(y + (1 if today > date(y, 6, 7) else 0), 6, 7), "✨"),
+        ("سهيل", date(y + (1 if today > date(y, 8, 24) else 0), 8, 24), "🌟"),
+        ("الوسم", date(y + (1 if today > date(y, 10, 16) else 0), 10, 16), "🌧️")
     ]
-    for ar, en, s_date, icon in seasons:
-        if s_date > today:
-            return ar, en, (s_date - today).days, icon
-    next_spring = date(y + 1, 3, 21)
-    return 'الربيع', 'Spring', (next_spring - today).days, '🌸'
+    results = []
+    for name, start_date, icon in tawalee:
+        diff = (start_date - today).days
+        if diff < 0:
+            start_date = start_date.replace(year=start_date.year + 1)
+            diff = (start_date - today).days
+        results.append({"name": name, "days": diff, "icon": icon})
+    results.sort(key=lambda x: x['days'])
+    return results[:3]
+
+def get_zodiac_data():
+    today = date.today()
+    zodiacs = [
+        ("♈ الحمل", (3, 21), (4, 19)),
+        ("♉ الثور", (4, 20), (5, 20)),
+        ("♊ الجوزاء", (5, 21), (6, 20)),
+        ("♋ السرطان", (6, 21), (7, 22)),
+        ("♌ الأسد", (7, 23), (8, 22)),
+        ("♍ العذراء", (8, 23), (9, 22)),
+        ("♎ الميزان", (9, 23), (10, 22)),
+        ("♏ العقرب", (10, 23), (11, 21)),
+        ("♐ القوس", (11, 22), (12, 21)),
+        ("♑ الجدي", (12, 22), (1, 19)),
+        ("♒ الدلو", (1, 20), (2, 18)),
+        ("♓ الحوت", (2, 19), (3, 20))
+    ]
+    y = today.year
+    for name, start, end in zodiacs:
+        start_date = date(y, start[0], start[1])
+        end_date = date(y, end[0], end[1])
+        if start_date <= today <= end_date:
+            return name
+        if name == "♑ الجدي" and (today >= date(y, 12, 22) or today <= date(y, 1, 19)):
+            return name
+    return "♈ الحمل"
+
+@st.cache_data(ttl=86400)
+def get_city_name_cached(lat, lon):
+    try:
+        url = f"https://nominatim.openstreetmap.org/reverse?lat={lat}&lon={lon}&format=json&accept-language=ar"
+        headers = {'User-Agent': 'FlatEarthClock/1.0'}
+        resp = requests.get(url, headers=headers, timeout=5)
+        if resp.status_code == 200:
+            data = resp.json()
+            address = data.get('address', {})
+            city = address.get('city') or address.get('town') or address.get('village') or address.get('state')
+            if city:
+                return city
+    except:
+        pass
+    try:
+        url = f"https://geocode.xyz/{lat},{lon}?json=1"
+        resp = requests.get(url, timeout=5)
+        if resp.status_code == 200:
+            data = resp.json()
+            city = data.get('city') or data.get('region')
+            if city:
+                return city
+    except:
+        pass
+    return "جاري تحديد الموقع..."
+
+@st.cache_data
+def get_video_base64(video_path):
+    try:
+        with open(video_path, "rb") as f:
+            data = f.read()
+        return base64.b64encode(data).decode()
+    except:
+        return None
+
+@st.cache_data
+def get_image_base64(image_path):
+    try:
+        with open(image_path, "rb") as f:
+            data = f.read()
+        return base64.b64encode(data).decode()
+    except:
+        return None
 
 # --- إدارة حالة الموقع الجغرافي ---
 if 'lat' not in st.session_state:
     st.session_state.lat, st.session_state.lon = 26.32, 43.97
     st.session_state.location_checked = False
 
-# --- صفحة طلب إذن الموقع (نص جديد) ---
 if not st.session_state.location_checked and GEO_LIB_AVAILABLE:
     st.markdown("""
     <style>
@@ -124,13 +198,11 @@ if not st.session_state.location_checked:
 now = datetime.now(sa_tz)
 today = now.date()
 
-# اليوم بالعربية والإنجليزية
 weekdays_ar = ["الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت", "الأحد"]
 weekdays_en = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 day_ar = weekdays_ar[today.weekday()]
 day_en = weekdays_en[today.weekday()]
 
-# التاريخ الهجري والميلادي
 try:
     h = Gregorian.fromdate(today).to_hijri()
     hij_str = f"{h.day}/{h.month}/{h.year} هـ"
@@ -138,11 +210,9 @@ except:
     hij_str = "--/--/---- هـ"
 mil_str = f"{today.day}/{today.month}/{today.year} م"
 
-# الطقس
 temp = fetch_weather_cached(st.session_state.lat, st.session_state.lon)
 weather_str = f"{temp}°C" if temp is not None else "--°C"
 
-# مواقيت الصلاة
 prayer_times_data = fetch_prayer_times_cached(st.session_state.lat, st.session_state.lon, today.strftime("%d-%m-%Y"))
 sunrise = sunset = "--:--"
 prayer_dict = {}
@@ -157,12 +227,37 @@ if prayer_times_data:
         'العشاء': prayer_times_data.get('Isha', '--:--')
     }
 
-# الفصل
-season_ar, season_en, days_left, season_icon = get_season_data()
+def get_next_prayer(prayer_dict, current_time):
+    prayers = [
+        ('الفجر', prayer_dict.get('الفجر')),
+        ('الظهر', prayer_dict.get('الظهر')),
+        ('العصر', prayer_dict.get('العصر')),
+        ('المغرب', prayer_dict.get('المغرب')),
+        ('العشاء', prayer_dict.get('العشاء'))
+    ]
+    current_time_str = current_time.strftime('%H:%M')
+    for name, time_str in prayers:
+        if time_str and time_str > current_time_str:
+            return name, time_str
+    return 'الفجر', prayer_dict.get('الفجر', '--:--')
+
+next_prayer_name, next_prayer_time = get_next_prayer(prayer_dict, now) if prayer_dict else ('الفجر', '--:--')
 
 prayer_json = json.dumps(prayer_dict, ensure_ascii=False)
 
-# --- HTML + CSS + JavaScript (التصميم النهائي مع محاذاة الأعمدة) ---
+tawalee_list = get_tawalee_data()
+tawalee_json = json.dumps(tawalee_list, ensure_ascii=False)
+
+zodiac_current = get_zodiac_data()
+
+city_name = get_city_name_cached(st.session_state.lat, st.session_state.lon)
+
+video_path = "ARRR1.mp4"
+video_base64 = get_video_base64(video_path)
+
+image_path = "TTTT1.jpg"
+image_base64 = get_image_base64(image_path)
+
 html_code = f"""
 <!DOCTYPE html>
 <html dir="rtl">
@@ -172,21 +267,65 @@ html_code = f"""
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
         * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-        body {{
-            font-family: 'Tajawal', sans-serif;
-            background: url("https://raw.githubusercontent.com/aale1164/flat-earth-clock./main/background.png");
-            background-size: cover;
-            background-position: center 40%;  /* يظهر الأفق في المنتصف تقريباً */
-            background-attachment: fixed;
-            min-height: 100dvh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            color: white;
+        html, body {{
+            width: 100%;
+            height: 100%;
             overflow: hidden;
-            padding: 5vh 16px 0 16px;
+            font-family: 'Tajawal', sans-serif;
         }}
+
+        .background-container {{
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            overflow: hidden;
+        }}
+
+        .bg-image {{
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url('data:image/jpeg;base64,{image_base64}');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            opacity: 0.75;
+            z-index: -2;
+        }}
+
+        .video-card {{
+            position: absolute;
+            top: 2%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            max-width: 500px;
+            z-index: 1;
+            background: rgba(0,0,0,0.05);
+            backdrop-filter: blur(8px);
+            border-radius: 40px;
+            border: 1px solid rgba(255,255,255,0.15);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }}
+
+        #bgVideo {{
+            width: 100%;
+            height: auto;
+            display: block;
+            opacity: 0.2;
+            mix-blend-mode: lighten;
+            filter: brightness(1.2);
+        }}
+
         .main-container {{
+            position: relative;
+            z-index: 10;
             width: 100%;
             max-width: 600px;
             height: 100%;
@@ -194,168 +333,260 @@ html_code = f"""
             flex-direction: column;
             align-items: center;
             justify-content: flex-start;
+            padding: 24vh 16px 0 16px;
+            margin: 0 auto;
+            color: white;
+            pointer-events: none;
         }}
-        .text-shadow {{
-            text-shadow: 2px 2px 12px rgba(0,0,0,0.8);
-            text-align: center;
-            margin: 0;
-            line-height: 1.3;
+        .main-container * {{
+            pointer-events: auto;
         }}
 
-        /* الوقت الرئيسي */
-        .time-container {{
-            display: flex;
-            align-items: baseline;
-            justify-content: center;
-            flex-wrap: wrap;
-            margin-bottom: 5px;
+        .card {{
+            background: rgba(0,0,0,0.3);
+            backdrop-filter: blur(5px);
+            border-radius: 30px;
+            border: 1px solid rgba(255,255,255,0.2);
+            padding: 10px 12px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }}
+
+        .time-card {{
+            margin-bottom: 8px;
+            margin-top: 0;
         }}
         .time-display {{
-            font-size: clamp(3.2rem, 14vw, 6rem);
+            font-size: clamp(2.5rem, 12vw, 4.5rem);
             font-weight: 900;
             line-height: 1;
+            display: inline-block;
         }}
         .ampm-display {{
-            font-size: clamp(2rem, 8vw, 4rem);
+            font-size: clamp(2rem, 8vw, 3.5rem);
             margin-right: 8px;
-            color: #FFD966;
+            color: white;
             font-weight: 700;
+            display: inline-block;
         }}
 
-        /* سطر متبقي على الصيف */
-        .season-main {{
-            font-size: clamp(1.5rem, 6vw, 2.4rem);
-            font-weight: 700;
-            margin-top: 15px;
-            color: #B5FFB5;
-        }}
-        .season-main-sub {{
-            font-size: clamp(1rem, 4vw, 1.5rem);
-            opacity: 0.85;
-            font-weight: 400;
-            display: block;
-            margin-top: 2px;
-        }}
-
-        /* صف المعلومات (عمودين مع محاذاة مختلفة) */
-        .info-row {{
+        .cards-grid {{
             display: flex;
             flex-direction: row;
-            justify-content: space-around;
+            justify-content: space-between;
             align-items: stretch;
+            gap: 6px;
             width: 100%;
-            margin-top: 20px;
-            gap: 15px;
+            margin-top: 5px;
         }}
-        .info-col {{
-            flex: 1;
+
+        .date-card {{
+            flex: 1.1;
+            min-width: 110px;
+            text-align: right;
+        }}
+        .day-ar {{ font-size: 1.4rem; font-weight: 900; }}
+        .day-en {{ font-size: 0.9rem; opacity: 0.9; }}
+        .hijri-date {{ font-size: 1.1rem; font-weight: 700; margin-top: 5px; }}
+        .miladi-date {{ font-size: 0.9rem; opacity: 0.9; }}
+
+        .prayer-card {{
+            flex: 1.2;
+            min-width: 120px;
             display: flex;
             flex-direction: column;
+            justify-content: center;
             align-items: center;
-            justify-content: flex-start;
+        }}
+        .prayer-icon {{ font-size: 1.6rem; }}
+        .prayer-name {{ font-size: 1.2rem; font-weight: 700; margin: 4px 0; }}
+        .prayer-time {{ font-size: 1.4rem; font-weight: 900; }}
+
+        .weather-card {{
+            flex: 1.1;
+            min-width: 110px;
+            text-align: left;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }}
+        .weather-row {{
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 2px;
+        }}
+        .weather-label {{
+            opacity: 0.8;
+            font-size: 0.8rem;
+        }}
+        .weather-value {{
+            font-weight: bold;
+            font-size: 1.1rem;
+        }}
+
+        .tawalee-container {{
+            display: flex;
+            justify-content: center;
+            align-items: stretch;
+            gap: 6px;
+            margin-top: 8px;
+            flex-wrap: wrap;
+        }}
+        .tawalee-item, .zodiac-item {{
+            background: rgba(0,0,0,0.3);
+            backdrop-filter: blur(5px);
+            padding: 6px 10px;
+            border-radius: 30px;
+            border: 1px solid rgba(255,255,255,0.2);
             text-align: center;
+            min-width: 75px;
+            flex: 1 0 70px;
         }}
+        .tawalee-icon, .zodiac-icon {{ font-size: 1.4rem; display: block; }}
+        .tawalee-name, .zodiac-name {{ font-weight: bold; font-size: 0.9rem; }}
+        .tawalee-days {{ font-size: 0.8rem; opacity: 0.9; }}
 
-        /* العمود الأيمن: يميل إلى اليمين قليلاً */
-        .right-col {{
-            padding-left: 8%;
+        .city-card {{
+            background: rgba(0,0,0,0.3);
+            backdrop-filter: blur(5px);
+            padding: 6px 12px;
+            border-radius: 30px;
+            border: 1px solid rgba(255,255,255,0.2);
+            text-align: center;
+            min-width: 100px;
+            margin-top: 5px;
         }}
-        /* العمود الأيسر: يميل إلى اليسار قليلاً */
-        .left-col {{
-            padding-right: 8%;
-        }}
+        .city-icon {{ font-size: 1.2rem; }}
+        .city-name {{ font-weight: bold; font-size: 0.9rem; }}
 
-        .day-ar {{ font-size: clamp(1.8rem, 7vw, 2.8rem); font-weight: 900; }}
-        .day-en {{ font-size: clamp(1.1rem, 4.5vw, 1.8rem); opacity: 0.85; margin-top: 2px; }}
-        .hijri-date {{ font-size: clamp(1.3rem, 5.5vw, 2rem); font-weight: 700; margin-top: 10px; }}
-        .miladi-date {{ font-size: clamp(1rem, 4.5vw, 1.6rem); opacity: 0.85; margin-top: 3px; }}
-
-        .social-links-vertical {{
+        .social-footer {{
+            margin-top: 10px;
+            padding-bottom: 15px;
             display: flex;
-            flex-direction: column;
-            align-items: center;
             gap: 12px;
-            margin-top: 20px;
+            justify-content: center;
         }}
-        .social-links-vertical a {{
+        .social-footer a {{
             color: white;
             text-decoration: none;
-            font-size: clamp(0.9rem, 4vw, 1.3rem);
+            font-size: 0.9rem;
             font-weight: bold;
-            text-shadow: 2px 2px 8px black;
+            padding: 6px 16px;
+            background: rgba(0,0,0,0.4);
+            border-radius: 50px;
+            border: 1px solid rgba(255,255,255,0.2);
+            backdrop-filter: blur(5px);
             transition: 0.2s;
         }}
-        .social-links-vertical a:hover {{
-            color: #FFD966;
-            transform: scale(1.05);
+        .social-footer a:hover {{
+            background: rgba(255,165,0,0.6);
         }}
 
-        /* العمود الأيسر (الطقس) */
-        .weather-item {{ margin: 8px 0; }}
-        .weather-title {{ font-size: clamp(1.2rem, 5vw, 1.8rem); font-weight: bold; }}
-        .weather-value {{ font-size: clamp(1rem, 4.5vw, 1.5rem); margin-top: 3px; }}
-        .weather-label {{ font-size: clamp(0.8rem, 3.5vw, 1.1rem); opacity: 0.7; display: block; margin-top: 2px; }}
-
         @media (max-width: 480px) {{
-            body {{ padding: 4vh 12px 0 12px; }}
-            .info-row {{ gap: 8px; }}
-            .right-col {{ padding-left: 5%; }}
-            .left-col {{ padding-right: 5%; }}
+            .main-container {{ padding: 24vh 10px 0 10px; }}
+            .time-display {{ font-size: 2.2rem; }}
+            .ampm-display {{ font-size: 1.8rem; }}
+            .cards-grid {{ gap: 4px; }}
+            .date-card, .weather-card {{ min-width: 100px; }}
+            .day-ar {{ font-size: 1.2rem; }}
+            .prayer-name {{ font-size: 1rem; }}
+            .prayer-time {{ font-size: 1.2rem; }}
+            .weather-value {{ font-size: 1rem; }}
+            .tawalee-item, .zodiac-item {{ min-width: 65px; padding: 5px 4px; }}
+            .city-card {{ min-width: 80px; }}
         }}
     </style>
 </head>
 <body>
+    <div class="background-container">
+        <div class="bg-image"></div>
+        <div class="video-card">
+            {f'<video autoplay loop muted playsinline id="bgVideo"><source src="data:video/mp4;base64,{video_base64}" type="video/mp4"></video>' if video_base64 else ''}
+        </div>
+    </div>
+
     <div class="main-container">
-        <!-- الوقت مع AM/PM فقط -->
-        <div class="text-shadow time-container">
+        <div class="card time-card">
             <span id="live-time" class="time-display">--:--:--</span>
             <span id="live-ampm" class="ampm-display"></span>
         </div>
 
-        <!-- متبقي على الصيف -->
-        <div class="text-shadow season-main">
-            {season_icon} متبقي على {season_ar}: {days_left} يوم
-            <span class="season-main-sub">{days_left} days left for {season_en}</span>
+        <div class="cards-grid">
+            <div class="card date-card">
+                <div class="day-ar">{day_ar}</div>
+                <div class="day-en">{day_en}</div>
+                <div class="hijri-date">{hij_str}</div>
+                <div class="miladi-date">{mil_str}</div>
+            </div>
+
+            <div class="card prayer-card">
+                <div class="prayer-icon">🕌</div>
+                <div class="prayer-name">{next_prayer_name}</div>
+                <div class="prayer-time">{next_prayer_time}</div>
+            </div>
+
+            <div class="card weather-card">
+                <div class="weather-row">
+                    <span class="weather-label">🌡️ الحرارة</span>
+                    <span class="weather-value">{weather_str}</span>
+                </div>
+                <div class="weather-row">
+                    <span class="weather-label">☀️ الشروق</span>
+                    <span class="weather-value">{sunrise}</span>
+                </div>
+                <div class="weather-row">
+                    <span class="weather-label">🌅 الغروب</span>
+                    <span class="weather-value">{sunset}</span>
+                </div>
+            </div>
         </div>
 
-        <!-- صف المعلومات (عمودين مع محاذاة مختلفة) -->
-        <div class="info-row">
-            <!-- العمود الأيمن: التاريخ + روابط التواصل (يميل لليمين) -->
-            <div class="info-col right-col">
-                <div class="text-shadow day-ar">{day_ar}</div>
-                <div class="text-shadow day-en">{day_en}</div>
-                <div class="text-shadow hijri-date">{hij_str}</div>
-                <div class="text-shadow miladi-date">{mil_str}</div>
+        <!-- صف واحد يجمع الطواليع + البرج -->
+        <div id="tawalee-container" class="tawalee-container"></div>
 
-                <div class="social-links-vertical">
-                    <a href="https://twitter.com/aale1164" target="_blank">𝕏 @aale1164</a>
-                    <a href="https://www.snapchat.com/add/aale112" target="_blank">👻 aale112</a>
-                </div>
-            </div>
+        <div class="city-card">
+            <span class="city-icon">📍</span>
+            <span class="city-name">{city_name}</span>
+        </div>
 
-            <!-- العمود الأيسر: الطقس والشروق والغروب (يميل لليسار) -->
-            <div class="info-col left-col">
-                <div class="weather-item">
-                    <div class="text-shadow weather-title">🌡️ {weather_str}</div>
-                    <div class="text-shadow weather-label">Temp</div>
-                </div>
-                <div class="weather-item">
-                    <div class="text-shadow weather-title">☀️ الشروق</div>
-                    <div class="text-shadow weather-value">{sunrise}</div>
-                    <div class="text-shadow weather-label">Sunrise</div>
-                </div>
-                <div class="weather-item">
-                    <div class="text-shadow weather-title">🌅 الغروب</div>
-                    <div class="text-shadow weather-value">{sunset}</div>
-                    <div class="text-shadow weather-label">Sunset</div>
-                </div>
-            </div>
+        <div class="social-footer">
+            <a href="https://twitter.com/aale1164" target="_blank">𝕏 @aale1164</a>
+            <a href="https://www.snapchat.com/add/aale112" target="_blank">👻 aale112</a>
         </div>
     </div>
 
     <script>
         const prayerTimes = {prayer_json};
         const TIMEZONE = 'Asia/Riyadh';
+        const tawaleeData = {tawalee_json};
+        const zodiacCurrent = "{zodiac_current}";
+
+        function renderTawalee() {{
+            const container = document.getElementById('tawalee-container');
+            container.innerHTML = '';
+            
+            // إضافة بطاقات الطواليع الثلاث
+            tawaleeData.forEach(item => {{
+                const div = document.createElement('div');
+                div.className = 'tawalee-item';
+                div.innerHTML = `
+                    <span class="tawalee-icon">${{item.icon}}</span>
+                    <div class="tawalee-name">${{item.name}}</div>
+                    <div class="tawalee-days">${{item.days}} يوم</div>
+                `;
+                container.appendChild(div);
+            }});
+            
+            // إضافة بطاقة البرج كالبطاقة الرابعة
+            const zodiacDiv = document.createElement('div');
+            zodiacDiv.className = 'zodiac-item';
+            zodiacDiv.innerHTML = `
+                <span class="zodiac-icon">${{zodiacCurrent.split(' ')[0]}}</span>
+                <div class="zodiac-name">${{zodiacCurrent}}</div>
+            `;
+            container.appendChild(zodiacDiv);
+        }}
 
         function updateClock() {{
             const now = new Date();
@@ -382,11 +613,22 @@ html_code = f"""
             document.getElementById('live-ampm').textContent = ampmEn;
         }}
 
+        function scheduleMidnightRefresh() {{
+            const now = new Date();
+            const nextMidnight = new Date(now);
+            nextMidnight.setDate(now.getDate() + 1);
+            nextMidnight.setHours(0, 0, 5, 0);
+            const timeUntilMidnight = nextMidnight - now;
+            setTimeout(() => {{ location.reload(); }}, timeUntilMidnight);
+        }}
+
+        renderTawalee();
         updateClock();
         setInterval(updateClock, 1000);
+        scheduleMidnightRefresh();
     </script>
 </body>
 </html>
 """
 
-components.html(html_code, height=950, scrolling=False)
+components.html(html_code, height=1000, scrolling=False)
