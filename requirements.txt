@@ -1,6 +1,6 @@
 streamlit
 pytz
-hijri-converter
 requests
+hijri-converter
 prayer-times-calculator
 streamlit-js-eval
