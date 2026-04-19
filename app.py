@@ -112,13 +112,13 @@ season_ar, season_en, days_left, season_icon = get_season_data()
 # تمرير بيانات الصلاة إلى JavaScript بصيغة JSON
 prayer_json = json.dumps(prayer_dict, ensure_ascii=False)
 
-# --- كود HTML + CSS + JavaScript (واجهة كاملة ومستقرة) ---
+# --- كود HTML + CSS + JavaScript (محسَّن للهواتف) ---
 html_code = f"""
 <!DOCTYPE html>
 <html dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
         * {{
@@ -132,17 +132,17 @@ html_code = f"""
             background-size: cover;
             background-position: center;
             background-attachment: fixed;
-            height: 100vh;
+            min-height: 100dvh;
             display: flex;
             flex-direction: column;
             align-items: center;
             color: white;
             overflow: hidden;
-            padding: 5vh 20px 0 20px;
+            padding: 5vh 16px 0 16px;
         }}
         .main-container {{
             width: 100%;
-            max-width: 1200px;
+            max-width: 600px;  /* عرض مناسب للهواتف */
             height: 100%;
             display: flex;
             flex-direction: column;
@@ -150,109 +150,149 @@ html_code = f"""
             justify-content: flex-start;
         }}
         .unified-text {{
-            text-shadow: 2px 2px 15px rgba(0,0,0,0.8);
+            text-shadow: 2px 2px 12px rgba(0,0,0,0.7);
             text-align: center;
             margin: 0;
             line-height: 1.3;
         }}
+        /* استخدام clamp لخطوط متجاوبة تماماً */
         .time-display {{
-            font-size: 15vw;
+            font-size: clamp(4rem, 18vw, 8rem);
             font-weight: 900;
             line-height: 1;
         }}
         .ampm-display {{
-            font-size: 5vw;
-            margin-right: 10px;
+            font-size: clamp(1.2rem, 6vw, 2.5rem);
+            margin-right: 8px;
             color: #FFD966;
         }}
         .info-line {{
-            font-size: 4.5vw;
+            font-size: clamp(1.2rem, 5.5vw, 2.2rem);
             font-weight: 700;
-            margin-top: 8px;
+            margin-top: 6px;
             opacity: 0.9;
         }}
         .prayer-line {{
-            font-size: 4.5vw;
+            font-size: clamp(1.2rem, 5.5vw, 2.2rem);
             font-weight: 700;
             margin-top: 12px;
             color: #B5FFB5;
         }}
-        /* صندوق البيانات (طقس، شروق، غروب) */
+        .eng-sub {{
+            font-size: clamp(0.9rem, 3.5vw, 1.3rem);
+            opacity: 0.8;
+            font-weight: 400;
+            display: block;
+            margin-top: 2px;
+        }}
+        /* صندوق البيانات - يتكيف مع الشاشات الصغيرة */
         .data-bar {{
             display: flex;
             flex-wrap: wrap;
             justify-content: center;
-            gap: 20px 30px;
-            margin-top: 35px;
+            align-items: center;
+            gap: 16px 24px;
+            margin-top: 25px;
             background: rgba(20, 20, 20, 0.25);
-            padding: 15px 35px;
+            padding: 14px 24px;
             border-radius: 60px;
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.2);
-            opacity: 0.95;
+            width: fit-content;
+            max-width: 100%;
         }}
         .data-item {{
-            font-size: 3.5vw;
+            font-size: clamp(1.1rem, 5vw, 2rem);
             font-weight: bold;
             color: #FFFFFF;
             text-align: center;
             line-height: 1.4;
-            opacity: 0.9;
-            min-width: 120px;
+            opacity: 0.95;
+            min-width: 100px;
         }}
         .data-label {{
-            font-size: 1.8vw;
+            font-size: clamp(0.7rem, 3vw, 1.1rem);
             font-weight: normal;
             opacity: 0.7;
             display: block;
-            margin-top: 4px;
+            margin-top: 2px;
         }}
         /* سطر الفصل */
         .season-line {{
-            font-size: 4.2vw;
+            font-size: clamp(1.2rem, 5.5vw, 2.2rem);
             font-weight: 700;
-            margin-top: 35px;
+            margin-top: 30px;
             opacity: 0.9;
         }}
         .season-sub {{
-            font-size: 2.2vw;
+            font-size: clamp(0.9rem, 3.8vw, 1.4rem);
             opacity: 0.75;
             font-weight: normal;
             display: block;
         }}
-        /* روابط التواصل */
+        /* روابط التواصل - أكبر ليسهل اللمس */
         .social-footer {{
             margin-top: auto;
-            padding-bottom: 30px;
+            padding-bottom: 20px;
             display: flex;
-            gap: 20px;
+            gap: 12px;
             flex-wrap: wrap;
             justify-content: center;
         }}
         .social-footer a {{
             color: white;
             text-decoration: none;
-            font-size: 16px;
+            font-size: clamp(0.9rem, 3.5vw, 1.2rem);
             font-weight: bold;
-            padding: 12px 28px;
+            padding: 12px 24px;
             background: rgba(0,0,0,0.5);
             border-radius: 50px;
             border: 1px solid rgba(255,255,255,0.25);
             backdrop-filter: blur(5px);
-            transition: all 0.3s ease;
-            opacity: 0.9;
+            transition: all 0.2s ease;
+            opacity: 0.95;
+            display: inline-block;
         }}
         .social-footer a:hover {{
             background: rgba(255, 165, 0, 0.6);
             border-color: #FFA500;
         }}
-        /* استجابة للشاشات الصغيرة */
-        @media (max-width: 600px) {{
-            .time-display {{ font-size: 18vw; }}
-            .info-line {{ font-size: 6vw; }}
-            .data-item {{ font-size: 5vw; }}
-            .data-label {{ font-size: 3vw; }}
-            .season-line {{ font-size: 5.5vw; }}
+
+        /* تحسينات خاصة بالهواتف الصغيرة (أقل من 480px) */
+        @media (max-width: 480px) {{
+            body {{
+                padding: 4vh 12px 0 12px;
+            }}
+            .data-bar {{
+                flex-direction: column;
+                gap: 12px;
+                padding: 16px 20px;
+                width: 90%;
+                border-radius: 40px;
+            }}
+            .data-item {{
+                min-width: auto;
+                width: 100%;
+            }}
+            .social-footer {{
+                padding-bottom: 15px;
+            }}
+            .social-footer a {{
+                padding: 10px 18px;
+            }}
+            .time-display {{
+                font-size: clamp(3.5rem, 20vw, 6rem);
+            }}
+        }}
+
+        /* للشاشات المتوسطة والكبيرة (تابلت) */
+        @media (min-width: 768px) {{
+            .main-container {{
+                max-width: 700px;
+            }}
+            .data-bar {{
+                padding: 16px 40px;
+            }}
         }}
     </style>
 </head>
@@ -270,7 +310,7 @@ html_code = f"""
         <!-- متبقي على الصلاة -->
         <div class="unified-text prayer-line">
             <span id="next-prayer-text">متبقي على --: --:--:--</span>
-            <span class="data-label" id="next-prayer-eng" style="font-size:2.2vw; margin-top:2px;">Time to --: --:--:--</span>
+            <span class="eng-sub" id="next-prayer-eng">Time to --: --:--:--</span>
         </div>
 
         <!-- صندوق الطقس والشروق والغروب -->
@@ -373,5 +413,5 @@ html_code = f"""
 </html>
 """
 
-# عرض المكون (height كبير لتغطية الشاشة بدون شريط تمرير)
-components.html(html_code, height=900, scrolling=False)
+# عرض المكون - height يعتمد على حجم الشاشة عبر vh في css
+components.html(html_code, height=950, scrolling=False)
