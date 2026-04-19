@@ -163,7 +163,7 @@ season_ar, season_en, days_left, season_icon = get_season_data()
 
 prayer_json = json.dumps(prayer_dict, ensure_ascii=False)
 
-# --- HTML + CSS + JavaScript (بدون أي صناديق، نصوص فقط مع ظل) ---
+# --- HTML + CSS + JavaScript (التصميم النهائي) ---
 html_code = f"""
 <!DOCTYPE html>
 <html dir="rtl">
@@ -176,15 +176,26 @@ html_code = f"""
         body {{
             font-family: 'Tajawal', sans-serif;
             background: url("https://raw.githubusercontent.com/aale1164/flat-earth-clock./main/background.png");
-            background-size: cover; background-position: center; background-attachment: fixed;
-            min-height: 100dvh; display: flex; flex-direction: column; align-items: center;
-            color: white; overflow: hidden; padding: 5vh 16px 0 16px;
+            background-size: cover;
+            background-position: center 20%;  /* يظهر الجزء العلوي من الصورة (الأرض) */
+            background-attachment: fixed;
+            min-height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: white;
+            overflow: hidden;
+            padding: 5vh 16px 0 16px;
         }}
         .main-container {{
-            width: 100%; max-width: 600px; height: 100%; display: flex;
-            flex-direction: column; align-items: center; justify-content: flex-start;
+            width: 100%;
+            max-width: 600px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
         }}
-        /* جميع النصوص بظل فقط، بدون أي خلفيات */
         .text-shadow {{
             text-shadow: 2px 2px 12px rgba(0,0,0,0.8);
             text-align: center;
@@ -192,7 +203,7 @@ html_code = f"""
             line-height: 1.3;
         }}
 
-        /* الوقت الرئيسي - بحجم أصغر قليلاً مع AM/PM بنفس الحجم */
+        /* الوقت الرئيسي */
         .time-container {{
             display: flex;
             align-items: baseline;
@@ -212,27 +223,27 @@ html_code = f"""
             font-weight: 700;
         }}
 
-        /* الصفوف الأخرى */
-        .prayer-line {{
-            font-size: clamp(1.3rem, 5.5vw, 2.2rem);
+        /* سطر متبقي على الصيف (بدلاً من الصلاة) */
+        .season-main {{
+            font-size: clamp(1.5rem, 6vw, 2.4rem);
             font-weight: 700;
-            margin-top: 10px;
+            margin-top: 15px;
             color: #B5FFB5;
         }}
-        .eng-sub {{
-            font-size: clamp(0.9rem, 3.8vw, 1.3rem);
+        .season-main-sub {{
+            font-size: clamp(1rem, 4vw, 1.5rem);
             opacity: 0.85;
             font-weight: 400;
             display: block;
             margin-top: 2px;
         }}
 
-        /* صف المعلومات (اليوم والتواريخ + الطقس والشروق والغروب) */
+        /* صف المعلومات (عمودين متساويين) */
         .info-row {{
             display: flex;
             flex-direction: row;
             justify-content: space-around;
-            align-items: center;
+            align-items: stretch;
             width: 100%;
             margin-top: 20px;
             gap: 15px;
@@ -242,59 +253,43 @@ html_code = f"""
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
+            justify-content: flex-start;
             text-align: center;
         }}
 
-        /* نصوص اليوم والتواريخ */
+        /* العمود الأيمن (اليوم والتواريخ + روابط التواصل) */
         .day-ar {{ font-size: clamp(1.8rem, 7vw, 2.8rem); font-weight: 900; }}
         .day-en {{ font-size: clamp(1.1rem, 4.5vw, 1.8rem); opacity: 0.85; margin-top: 2px; }}
         .hijri-date {{ font-size: clamp(1.3rem, 5.5vw, 2rem); font-weight: 700; margin-top: 10px; }}
         .miladi-date {{ font-size: clamp(1rem, 4.5vw, 1.6rem); opacity: 0.85; margin-top: 3px; }}
 
-        /* نصوص الطقس والشروق والغروب */
+        .social-links-vertical {{
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            margin-top: 20px;
+        }}
+        .social-links-vertical a {{
+            color: white;
+            text-decoration: none;
+            font-size: clamp(0.9rem, 4vw, 1.3rem);
+            font-weight: bold;
+            text-shadow: 2px 2px 8px black;
+            transition: 0.2s;
+        }}
+        .social-links-vertical a:hover {{
+            color: #FFD966;
+            transform: scale(1.05);
+        }}
+
+        /* العمود الأيسر (الطقس والشروق والغروب) */
         .weather-item {{ margin: 8px 0; }}
         .weather-title {{ font-size: clamp(1.2rem, 5vw, 1.8rem); font-weight: bold; }}
         .weather-value {{ font-size: clamp(1rem, 4.5vw, 1.5rem); margin-top: 3px; }}
         .weather-label {{ font-size: clamp(0.8rem, 3.5vw, 1.1rem); opacity: 0.7; display: block; margin-top: 2px; }}
 
-        /* سطر الفصل */
-        .season-line {{
-            font-size: clamp(1.3rem, 5.5vw, 2rem);
-            font-weight: 700;
-            margin-top: 25px;
-        }}
-        .season-sub {{
-            font-size: clamp(0.9rem, 3.8vw, 1.3rem);
-            opacity: 0.8;
-            font-weight: normal;
-            display: block;
-        }}
-
-        /* روابط التواصل */
-        .social-footer {{
-            margin-top: auto;
-            padding-bottom: 20px;
-            display: flex;
-            gap: 12px;
-            flex-wrap: wrap;
-            justify-content: center;
-        }}
-        .social-footer a {{
-            color: white;
-            text-decoration: none;
-            font-size: clamp(0.9rem, 3.5vw, 1.2rem);
-            font-weight: bold;
-            padding: 10px 20px;
-            background: rgba(0,0,0,0.4);
-            border-radius: 50px;
-            border: 1px solid rgba(255,255,255,0.2);
-            backdrop-filter: blur(4px);
-            transition: all 0.2s ease;
-            text-shadow: 1px 1px 5px black;
-        }}
-        .social-footer a:hover {{ background: rgba(255, 165, 0, 0.6); border-color: #FFA500; }}
-
+        /* للشاشات الصغيرة */
         @media (max-width: 480px) {{
             body {{ padding: 4vh 12px 0 12px; }}
             .info-row {{ gap: 8px; }}
@@ -303,26 +298,32 @@ html_code = f"""
 </head>
 <body>
     <div class="main-container">
-        <!-- الوقت مع AM/PM بنفس الحجم تقريباً -->
+        <!-- الوقت مع AM/PM فقط -->
         <div class="text-shadow time-container">
             <span id="live-time" class="time-display">--:--:--</span>
             <span id="live-ampm" class="ampm-display"></span>
         </div>
 
-        <!-- متبقي على الصلاة -->
-        <div class="text-shadow prayer-line">
-            <span id="next-prayer-text">متبقي على صلاة --: --:--:--</span>
-            <span class="eng-sub" id="next-prayer-eng">Time to --: --:--:--</span>
+        <!-- متبقي على الصيف (بدلاً من سطر الصلاة) -->
+        <div class="text-shadow season-main">
+            {season_icon} متبقي على {season_ar}: {days_left} يوم
+            <span class="season-main-sub">{days_left} days left for {season_en}</span>
         </div>
 
-        <!-- صف المعلومات (بدون أي صناديق) -->
+        <!-- صف المعلومات (عمودين) -->
         <div class="info-row">
-            <!-- العمود الأيمن: اليوم والتاريخ -->
+            <!-- العمود الأيمن: اليوم والتواريخ + روابط التواصل -->
             <div class="info-col">
                 <div class="text-shadow day-ar">{day_ar}</div>
                 <div class="text-shadow day-en">{day_en}</div>
                 <div class="text-shadow hijri-date">{hij_str}</div>
                 <div class="text-shadow miladi-date">{mil_str}</div>
+
+                <!-- روابط التواصل عمودية أسفل التاريخ -->
+                <div class="social-links-vertical">
+                    <a href="https://twitter.com/aale1164" target="_blank">𝕏 @aale1164</a>
+                    <a href="https://www.snapchat.com/add/aale112" target="_blank">👻 aale112</a>
+                </div>
             </div>
 
             <!-- العمود الأيسر: الطقس والشروق والغروب -->
@@ -344,17 +345,7 @@ html_code = f"""
             </div>
         </div>
 
-        <!-- سطر الفصل -->
-        <div class="text-shadow season-line">
-            {season_icon} متبقي على {season_ar}: {days_left} يوم
-            <span class="season-sub">{days_left} days left for {season_en}</span>
-        </div>
-
-        <!-- روابط التواصل -->
-        <div class="social-footer">
-            <a href="https://twitter.com/aale1164" target="_blank">𝕏 @aale1164</a>
-            <a href="https://www.snapchat.com/add/aale112" target="_blank">👻 aale112</a>
-        </div>
+        <!-- لا يوجد سطر فصل إضافي -->
     </div>
 
     <script>
@@ -364,8 +355,11 @@ html_code = f"""
         function updateClock() {{
             const now = new Date();
             const formatter = new Intl.DateTimeFormat('en-US', {{
-                timeZone: TIMEZONE, hour: 'numeric', minute: 'numeric',
-                second: 'numeric', hour12: false
+                timeZone: TIMEZONE,
+                hour: 'numeric',
+                minute: 'numeric',
+                second: 'numeric',
+                hour12: false
             }});
             const parts = formatter.formatToParts(now);
             const timeObj = {{}};
@@ -374,49 +368,15 @@ html_code = f"""
             let hour = parseInt(timeObj.hour);
             const minute = parseInt(timeObj.minute);
             const second = parseInt(timeObj.second);
-            const year = parseInt(timeObj.year);
-            const month = parseInt(timeObj.month) - 1;
-            const day = parseInt(timeObj.day);
 
             const hour12 = hour % 12 || 12;
-            const ampmAr = hour >= 12 ? 'م' : 'ص';
             const ampmEn = hour >= 12 ? 'PM' : 'AM';
 
             document.getElementById('live-time').textContent = 
                 `${{hour12}}:${{minute.toString().padStart(2, '0')}}:${{second.toString().padStart(2, '0')}}`;
-            document.getElementById('live-ampm').textContent = `${{ampmAr}} / ${{ampmEn}}`;
-
-            const prayers = [
-                {{ ar: 'الفجر', en: 'Fajr', time: prayerTimes['الفجر'] }},
-                {{ ar: 'الظهر', en: 'Dhuhr', time: prayerTimes['الظهر'] }},
-                {{ ar: 'العصر', en: 'Asr', time: prayerTimes['العصر'] }},
-                {{ ar: 'المغرب', en: 'Maghrib', time: prayerTimes['المغرب'] }},
-                {{ ar: 'العشاء', en: 'Isha', time: prayerTimes['العشاء'] }}
-            ];
-
-            const currentTimeStr = `${{hour.toString().padStart(2, '0')}}:${{minute.toString().padStart(2, '0')}}`;
-            let nextPrayer = prayers.find(p => p.time && p.time > currentTimeStr) || prayers[0];
-
-            if (nextPrayer && nextPrayer.time) {{
-                const [pHour, pMinute] = nextPrayer.time.split(':').map(Number);
-                let prayerDate = new Date(year, month, day, pHour, pMinute, 0);
-                if (nextPrayer === prayers[0] && currentTimeStr > (prayers[4].time || "23:59")) {{
-                    prayerDate.setDate(prayerDate.getDate() + 1);
-                }}
-                const diffSeconds = Math.floor((prayerDate - now) / 1000);
-                if (diffSeconds > 0) {{
-                    const hLeft = Math.floor(diffSeconds / 3600);
-                    const mLeft = Math.floor((diffSeconds % 3600) / 60);
-                    const sLeft = diffSeconds % 60;
-                    const timeLeft = `${{hLeft.toString().padStart(2, '0')}}:${{mLeft.toString().padStart(2, '0')}}:${{sLeft.toString().padStart(2, '0')}}`;
-                    document.getElementById('next-prayer-text').textContent = `متبقي على صلاة ${{nextPrayer.ar}}: ${{timeLeft}}`;
-                    document.getElementById('next-prayer-eng').textContent = `Time to ${{nextPrayer.en}}: ${{timeLeft}}`;
-                }} else {{
-                    document.getElementById('next-prayer-text').textContent = `حان وقت صلاة ${{nextPrayer.ar}}`;
-                    document.getElementById('next-prayer-eng').textContent = `Time for ${{nextPrayer.en}}`;
-                }}
-            }}
+            document.getElementById('live-ampm').textContent = ampmEn;
         }}
+
         updateClock();
         setInterval(updateClock, 1000);
     </script>
