@@ -7,7 +7,7 @@ from hijri_converter import Gregorian
 import json
 
 # --- إعداد الصفحة ---
-st.set_page_config(page_title="ساعة الأرض - aale1164", layout="wide")
+st.set_page_config(page_title="ساعة الأرض المسطحة - aale1164", layout="wide")
 
 # محاولة استيراد مكتبة الموقع الجغرافي
 try:
