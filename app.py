@@ -16,7 +16,7 @@ except ImportError:
 st.set_page_config(page_title="ساعة الصلاة - aale1164", layout="wide")
 sa_tz = pytz.timezone('Asia/Riyadh')
 
-# --- دوال جلب البيانات (مع تخزين مؤقت) ---
+# --- دوال جلب البيانات ---
 @st.cache_data(ttl=600)
 def fetch_weather_cached(lat, lon):
     try:
@@ -35,14 +35,17 @@ def get_season_data():
         ('الخريف', 'Autumn', date(y, 9, 23), '🍂'),
         ('الشتاء', 'Winter', date(y, 12, 21), '❄️')
     ]
+    # البحث عن الفصل القادم
     for ar, en, s_date, icon in seasons:
         if s_date > today:
             return ar, en, (s_date - today).days, icon
+    
+    # إذا انتهت فصول السنة الحالية، نعود للربيع في السنة القادمة
     next_spring = date(y + 1, 3, 21)
     return 'الربيع', 'Spring', (next_spring - today).days, '🌸'
 
 # --- الحصول على الإحداثيات ---
-lat, lon = 26.32, 43.97  # بريدة
+lat, lon = 26.32, 43.97  # إحداثيات بريدة كافتراضي
 try:
     loc = get_geolocation()
     if loc and 'coords' in loc:
@@ -50,7 +53,7 @@ try:
 except:
     pass
 
-# --- التصميم CSS (مع تحسينات للشفافية والتباعد) ---
+# --- التصميم CSS ---
 st.markdown("""
 <style>
     header, footer, .stDeployButton, #MainMenu { visibility: hidden !important; height: 0; }
@@ -75,82 +78,79 @@ st.markdown("""
 
     .unified-text {
         color: #FFFFFF !important;
-        text-shadow: 2px 2px 10px rgba(0,0,0,0.7); 
+        text-shadow: 2px 2px 10px rgba(0,0,0,0.8); 
         margin: 0;
-        line-height: 1.2;
+        line-height: 1.1;
         text-align: center;
     }
 
-    .time-display { font-size: 16vw; font-weight: 900; }
-    .ampm-display { font-size: 5vw; margin-right: 10px; color: #FFD966; }
+    .time-display { font-size: 15vw; font-weight: 900; }
+    .ampm-display { font-size: 4vw; margin-right: 15px; color: #FFA500; }
 
     .info-line { 
-        font-size: 4.5vw; 
+        font-size: 4.2vw; 
         font-weight: 700; 
-        margin-top: 8px;
-        opacity: 0.9;              /* شفافية خفيفة */
+        margin-top: 5px;
     }
 
-    /* صندوق البيانات (طقس، شروق، غروب) - نزول إضافي */
     .data-bar {
         display: flex;
-        gap: 25px;
-        margin-top: 30px;           /* تمت زيادته لينزل أكثر */
-        background: rgba(20, 20, 20, 0.25);
-        padding: 12px 30px;
+        gap: 30px;
+        margin-top: 40px;
+        background: rgba(0, 0, 0, 0.3);
+        padding: 15px 40px;
         border-radius: 60px;
-        backdrop-filter: blur(8px);
+        backdrop-filter: blur(10px);
         border: 1px solid rgba(255, 255, 255, 0.15);
-        opacity: 0.9;               /* شفافية الصندوق نفسه */
     }
 
     .data-item {
-        font-size: 3.2vw;
+        font-size: 3vw;
         font-weight: bold;
         color: #FFFFFF;
         text-align: center;
-        line-height: 1.4;
-        opacity: 0.85;              /* شفافية الأرقام */
     }
 
     .data-label {
-        font-size: 1.8vw;
+        font-size: 1.4vw;
         font-weight: normal;
-        opacity: 0.7;
+        opacity: 0.8;
         display: block;
+        text-transform: uppercase;
     }
 
-    /* سطر الفصل - ينزل أكثر */
-    .season-line {
-        font-size: 4vw;
-        font-weight: 700;
-        margin-top: 35px;           /* زيادة المسافة عن الصندوق */
-        opacity: 0.9;
+    .season-section {
+        margin-top: 40px;
+    }
+
+    .season-text {
+        font-size: 4.5vw;
+        font-weight: 800;
     }
 
     .season-sub {
-        font-size: 2.2vw;
-        opacity: 0.7;
-        font-weight: normal;
+        font-size: 2vw;
+        opacity: 0.8;
+        font-weight: 400;
         display: block;
     }
 
     .social-footer { 
         margin-top: auto; 
-        padding-bottom: 30px; 
+        padding-bottom: 40px; 
         display: flex;
         gap: 20px;
     }
     .social-footer a {
         color: white !important; 
         text-decoration: none; 
-        font-size: 16px; 
+        font-size: 18px; 
         font-weight: bold;
-        padding: 12px 24px; 
-        background: rgba(0,0,0,0.5); 
+        padding: 12px 30px; 
+        background: rgba(0,0,0,0.6); 
         border-radius: 50px;
         border: 1px solid rgba(255,255,255,0.2);
-        opacity: 0.9;
+        transition: 0.3s;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -160,16 +160,22 @@ placeholder = st.empty()
 # --- حلقة التحديث ---
 while True:
     now = datetime.now(sa_tz)
-    h = Gregorian(now.year, now.month, now.day).to_hijri()
-    hij_str = f"{h.day}/{h.month}/{h.year} هـ"
+    # تحويل التاريخ للهجري
+    try:
+        h = Gregorian(now.year, now.month, now.day).to_hijri()
+        hij_str = f"{h.day}/{h.month}/{h.year} هـ"
+    except:
+        hij_str = "--/--/-- هـ"
+        
     mil_str = f"{now.day}/{now.month}/{now.year} م"
 
-    # الصلاة القادمة
-    next_p_name, time_left = "الفجر", "00:00:00"
+    # حساب أوقات الصلاة
+    next_p_name, time_left = "...", "00:00:00"
     sunrise, sunset = "--:--", "--:--"
+    
     if PRAYER_LIB:
         try:
-            calc = PrayerTimesCalculator(lat, lon, 'makkah', now.strftime("%Y-%m-%d"))
+            calc = PrayerTimesCalculator(latitude=lat, longitude=lon, calculation_method='makkah', date=now.strftime("%Y-%m-%d"))
             times = calc.fetch_prayer_times()
             if times:
                 sunrise = times.get('Sunrise', '--:--')
@@ -179,29 +185,34 @@ while True:
                     ('العصر', times['Asr']), ('المغرب', times['Maghrib']),
                     ('العشاء', times['Isha'])
                 ]
-                curr = now.strftime("%H:%M:%S")
+                curr_time_str = now.strftime("%H:%M:%S")
+                found = False
                 for name, pt in prayers:
-                    if f"{pt}:00" > curr:
+                    if f"{pt}:00" > curr_time_str:
                         next_p_name = name
                         target = sa_tz.localize(datetime.strptime(f"{pt}:00", "%H:%M:%S").replace(year=now.year, month=now.month, day=now.day))
                         diff = target - now
                         h_v, rem = divmod(diff.seconds, 3600)
                         m_v, s_v = divmod(rem, 60)
                         time_left = f"{h_v:02d}:{m_v:02d}:{s_v:02d}"
+                        found = True
                         break
+                # إذا انتهت صلوات اليوم، الصلاة القادمة هي فجر الغد
+                if not found:
+                    next_p_name = "الفجر"
+                    time_left = "00:00:00" # تبسيطاً للحلقة
         except:
             pass
 
-    # الطقس والفصل
+    # البيانات الإضافية
     temp = fetch_weather_cached(lat, lon)
-    weather_str = f"{temp}°C" if temp is not None else "--°C"
-    season_ar, season_en, days_left, season_icon = get_season_data()
+    weather_str = f"{temp}°" if temp is not None else "--°"
+    s_ar, s_en, d_left, s_icon = get_season_data()
 
-    # تنسيق الوقت
+    # تنسيق الوقت للساعة
     raw_t = now.strftime('%I:%M:%S')
-    if raw_t.startswith('0'):
-        raw_t = raw_t[1:]
-    ampm = now.strftime('%p')
+    if raw_t.startswith('0'): raw_t = raw_t[1:]
+    ampm = "AM" if now.strftime('%p') == "AM" else "PM"
 
     with placeholder.container():
         st.markdown(f"""
@@ -210,21 +221,19 @@ while True:
                     {raw_t}<span class='ampm-display'>{ampm}</span>
                 </div>
                 <div class='unified-text info-line'>{hij_str} | {mil_str}</div>
-                <div class='unified-text info-line' style='color:#B5FFB5;'>
+                <div class='unified-text info-line' style='color:#00FF00;'>
                     متبقي على صلاة {next_p_name}: {time_left}
                 </div>
 
-                <!-- صندوق البيانات: طقس، شروق، غروب -->
                 <div class='data-bar'>
-                    <div class='data-item'>🌡️ {weather_str}<span class='data-label'>Temp</span></div>
-                    <div class='data-item'>☀️ الشروق: {sunrise}<span class='data-label'>Sunrise</span></div>
-                    <div class='data-item'>🌅 الغروب: {sunset}<span class='data-label'>Sunset</span></div>
+                    <div class='data-item'><span class='data-label'>TEMP</span>🌡️ {weather_str}</div>
+                    <div class='data-item'><span class='data-label'>SUNRISE</span>☀️ {sunrise}</div>
+                    <div class='data-item'><span class='data-label'>SUNSET</span>🌅 {sunset}</div>
                 </div>
 
-                <!-- سطر الفصل -->
-                <div class='unified-text season-line'>
-                    {season_icon} متبقي على {season_ar}: {days_left} يوم
-                    <span class='season-sub'>{days_left} days left for {season_en}</span>
+                <div class='season-section unified-text'>
+                    <div class='season-text'>{s_icon} متبقي على {s_ar}: {d_left} يوم</div>
+                    <span class='season-sub'>{d_left} days left for {s_en}</span>
                 </div>
 
                 <div class='social-footer'>
