@@ -3,4 +3,3 @@ pytz
 requests
 hijri-converter
 streamlit-js-eval
-aladhan-api
