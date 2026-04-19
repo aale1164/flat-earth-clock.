@@ -74,7 +74,7 @@ if 'lat' not in st.session_state:
     st.session_state.lat, st.session_state.lon = 26.32, 43.97
     st.session_state.location_checked = False
 
-# --- صفحة طلب إذن الموقع (مع النص الجديد) ---
+# --- صفحة طلب إذن الموقع ---
 if not st.session_state.location_checked and GEO_LIB_AVAILABLE:
     st.markdown("""
     <style>
@@ -163,7 +163,7 @@ season_ar, season_en, days_left, season_icon = get_season_data()
 
 prayer_json = json.dumps(prayer_dict, ensure_ascii=False)
 
-# --- HTML + CSS + JavaScript (تصميم محسّن مع صندوقين شفافين جداً) ---
+# --- HTML + CSS + JavaScript (بدون أي صناديق، نصوص فقط مع ظل) ---
 html_code = f"""
 <!DOCTYPE html>
 <html dir="rtl">
@@ -178,149 +178,174 @@ html_code = f"""
             background: url("https://raw.githubusercontent.com/aale1164/flat-earth-clock./main/background.png");
             background-size: cover; background-position: center; background-attachment: fixed;
             min-height: 100dvh; display: flex; flex-direction: column; align-items: center;
-            color: white; overflow: hidden; padding: 4vh 16px 0 16px;
+            color: white; overflow: hidden; padding: 5vh 16px 0 16px;
         }}
         .main-container {{
             width: 100%; max-width: 600px; height: 100%; display: flex;
             flex-direction: column; align-items: center; justify-content: flex-start;
         }}
-        .unified-text {{
-            text-shadow: 2px 2px 12px rgba(0,0,0,0.7); text-align: center; margin: 0; line-height: 1.3;
-        }}
-        .time-display {{ font-size: clamp(3.8rem, 16vw, 7rem); font-weight: 900; line-height: 1; }}
-        .ampm-display {{ font-size: clamp(1.1rem, 5vw, 2.2rem); margin-right: 8px; color: #FFD966; }}
-        
-        .prayer-line {{
-            font-size: clamp(1.1rem, 5vw, 2rem); font-weight: 700; margin-top: 10px; color: #B5FFB5;
-        }}
-        .eng-sub {{
-            font-size: clamp(0.8rem, 3.2vw, 1.2rem); opacity: 0.8; font-weight: 400;
-            display: block; margin-top: 2px;
+        /* جميع النصوص بظل فقط، بدون أي خلفيات */
+        .text-shadow {{
+            text-shadow: 2px 2px 12px rgba(0,0,0,0.8);
+            text-align: center;
+            margin: 0;
+            line-height: 1.3;
         }}
 
-        /* ---------- الصف الذي يحتوي على عمودين ---------- */
+        /* الوقت الرئيسي - بحجم أصغر قليلاً مع AM/PM بنفس الحجم */
+        .time-container {{
+            display: flex;
+            align-items: baseline;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 5px;
+        }}
+        .time-display {{
+            font-size: clamp(3.2rem, 14vw, 6rem);
+            font-weight: 900;
+            line-height: 1;
+        }}
+        .ampm-display {{
+            font-size: clamp(2rem, 8vw, 4rem);
+            margin-right: 8px;
+            color: #FFD966;
+            font-weight: 700;
+        }}
+
+        /* الصفوف الأخرى */
+        .prayer-line {{
+            font-size: clamp(1.3rem, 5.5vw, 2.2rem);
+            font-weight: 700;
+            margin-top: 10px;
+            color: #B5FFB5;
+        }}
+        .eng-sub {{
+            font-size: clamp(0.9rem, 3.8vw, 1.3rem);
+            opacity: 0.85;
+            font-weight: 400;
+            display: block;
+            margin-top: 2px;
+        }}
+
+        /* صف المعلومات (اليوم والتواريخ + الطقس والشروق والغروب) */
         .info-row {{
             display: flex;
             flex-direction: row;
             justify-content: space-around;
-            align-items: stretch;
+            align-items: center;
             width: 100%;
             margin-top: 20px;
-            gap: 12px;
+            gap: 15px;
         }}
-
-        /* نمط موحد للصندوقين */
-        .info-box {{
+        .info-col {{
             flex: 1;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             text-align: center;
-            background: rgba(0, 0, 0, 0.15); /* شفافية عالية جداً */
-            backdrop-filter: blur(5px);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            border-radius: 30px;
-            padding: 14px 6px;
         }}
 
-        /* العمود الأيمن: اليوم والتواريخ */
-        .day-ar {{ font-size: clamp(1.5rem, 6vw, 2.4rem); font-weight: 900; opacity: 0.95; }}
-        .day-en {{ font-size: clamp(0.9rem, 4vw, 1.5rem); opacity: 0.8; margin-top: 2px; }}
-        .hijri-date {{ font-size: clamp(1rem, 4.5vw, 1.8rem); font-weight: 700; margin-top: 10px; opacity: 0.9; }}
-        .miladi-date {{ font-size: clamp(0.9rem, 4vw, 1.4rem); opacity: 0.8; margin-top: 3px; }}
+        /* نصوص اليوم والتواريخ */
+        .day-ar {{ font-size: clamp(1.8rem, 7vw, 2.8rem); font-weight: 900; }}
+        .day-en {{ font-size: clamp(1.1rem, 4.5vw, 1.8rem); opacity: 0.85; margin-top: 2px; }}
+        .hijri-date {{ font-size: clamp(1.3rem, 5.5vw, 2rem); font-weight: 700; margin-top: 10px; }}
+        .miladi-date {{ font-size: clamp(1rem, 4.5vw, 1.6rem); opacity: 0.85; margin-top: 3px; }}
 
-        /* العمود الأيسر: الطقس والشروق والغروب */
-        .weather-item {{
-            margin: 6px 0;
-            width: 100%;
-        }}
-        .weather-title {{
-            font-size: clamp(1rem, 4.5vw, 1.6rem); font-weight: bold; opacity: 0.95;
-        }}
-        .weather-value {{
-            font-size: clamp(0.9rem, 4vw, 1.4rem); font-weight: normal; opacity: 0.9;
-            margin-top: 2px;
-        }}
-        .weather-label {{
-            font-size: clamp(0.7rem, 3vw, 1rem); opacity: 0.65; display: block;
-            margin-top: 2px;
-        }}
+        /* نصوص الطقس والشروق والغروب */
+        .weather-item {{ margin: 8px 0; }}
+        .weather-title {{ font-size: clamp(1.2rem, 5vw, 1.8rem); font-weight: bold; }}
+        .weather-value {{ font-size: clamp(1rem, 4.5vw, 1.5rem); margin-top: 3px; }}
+        .weather-label {{ font-size: clamp(0.8rem, 3.5vw, 1.1rem); opacity: 0.7; display: block; margin-top: 2px; }}
 
         /* سطر الفصل */
         .season-line {{
-            font-size: clamp(1.1rem, 5vw, 2rem); font-weight: 700; margin-top: 25px; opacity: 0.9;
+            font-size: clamp(1.3rem, 5.5vw, 2rem);
+            font-weight: 700;
+            margin-top: 25px;
         }}
         .season-sub {{
-            font-size: clamp(0.8rem, 3.5vw, 1.2rem); opacity: 0.75; font-weight: normal; display: block;
+            font-size: clamp(0.9rem, 3.8vw, 1.3rem);
+            opacity: 0.8;
+            font-weight: normal;
+            display: block;
         }}
 
         /* روابط التواصل */
         .social-footer {{
-            margin-top: auto; padding-bottom: 20px; display: flex; gap: 12px;
-            flex-wrap: wrap; justify-content: center;
+            margin-top: auto;
+            padding-bottom: 20px;
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            justify-content: center;
         }}
         .social-footer a {{
-            color: white; text-decoration: none; font-size: clamp(0.8rem, 3.5vw, 1.1rem);
-            font-weight: bold; padding: 10px 20px; background: rgba(0,0,0,0.5);
-            border-radius: 50px; border: 1px solid rgba(255,255,255,0.25);
-            backdrop-filter: blur(5px); transition: all 0.2s ease; opacity: 0.95;
-            display: inline-block;
+            color: white;
+            text-decoration: none;
+            font-size: clamp(0.9rem, 3.5vw, 1.2rem);
+            font-weight: bold;
+            padding: 10px 20px;
+            background: rgba(0,0,0,0.4);
+            border-radius: 50px;
+            border: 1px solid rgba(255,255,255,0.2);
+            backdrop-filter: blur(4px);
+            transition: all 0.2s ease;
+            text-shadow: 1px 1px 5px black;
         }}
         .social-footer a:hover {{ background: rgba(255, 165, 0, 0.6); border-color: #FFA500; }}
 
         @media (max-width: 480px) {{
-            body {{ padding: 3vh 12px 0 12px; }}
+            body {{ padding: 4vh 12px 0 12px; }}
             .info-row {{ gap: 8px; }}
-            .info-box {{ padding: 12px 4px; }}
         }}
     </style>
 </head>
 <body>
     <div class="main-container">
-        <!-- الوقت الكبير -->
-        <div class="unified-text time-display">
-            <span id="live-time">--:--:--</span>
+        <!-- الوقت مع AM/PM بنفس الحجم تقريباً -->
+        <div class="text-shadow time-container">
+            <span id="live-time" class="time-display">--:--:--</span>
             <span id="live-ampm" class="ampm-display"></span>
         </div>
 
         <!-- متبقي على الصلاة -->
-        <div class="unified-text prayer-line">
-            <span id="next-prayer-text">متبقي على --: --:--:--</span>
+        <div class="text-shadow prayer-line">
+            <span id="next-prayer-text">متبقي على صلاة --: --:--:--</span>
             <span class="eng-sub" id="next-prayer-eng">Time to --: --:--:--</span>
         </div>
 
-        <!-- الصف ذو العمودين (كلاهما داخل صندوق شفاف) -->
+        <!-- صف المعلومات (بدون أي صناديق) -->
         <div class="info-row">
             <!-- العمود الأيمن: اليوم والتاريخ -->
-            <div class="info-box">
-                <div class="day-ar">{day_ar}</div>
-                <div class="day-en">{day_en}</div>
-                <div class="hijri-date">{hij_str}</div>
-                <div class="miladi-date">{mil_str}</div>
+            <div class="info-col">
+                <div class="text-shadow day-ar">{day_ar}</div>
+                <div class="text-shadow day-en">{day_en}</div>
+                <div class="text-shadow hijri-date">{hij_str}</div>
+                <div class="text-shadow miladi-date">{mil_str}</div>
             </div>
 
             <!-- العمود الأيسر: الطقس والشروق والغروب -->
-            <div class="info-box">
+            <div class="info-col">
                 <div class="weather-item">
-                    <div class="weather-title">🌡️ {weather_str}</div>
-                    <div class="weather-label">Temp</div>
+                    <div class="text-shadow weather-title">🌡️ {weather_str}</div>
+                    <div class="text-shadow weather-label">Temp</div>
                 </div>
                 <div class="weather-item">
-                    <div class="weather-title">☀️ الشروق</div>
-                    <div class="weather-value">{sunrise}</div>
-                    <div class="weather-label">Sunrise</div>
+                    <div class="text-shadow weather-title">☀️ الشروق</div>
+                    <div class="text-shadow weather-value">{sunrise}</div>
+                    <div class="text-shadow weather-label">Sunrise</div>
                 </div>
                 <div class="weather-item">
-                    <div class="weather-title">🌅 الغروب</div>
-                    <div class="weather-value">{sunset}</div>
-                    <div class="weather-label">Sunset</div>
+                    <div class="text-shadow weather-title">🌅 الغروب</div>
+                    <div class="text-shadow weather-value">{sunset}</div>
+                    <div class="text-shadow weather-label">Sunset</div>
                 </div>
             </div>
         </div>
 
         <!-- سطر الفصل -->
-        <div class="unified-text season-line">
+        <div class="text-shadow season-line">
             {season_icon} متبقي على {season_ar}: {days_left} يوم
             <span class="season-sub">{days_left} days left for {season_en}</span>
         </div>
@@ -384,10 +409,10 @@ html_code = f"""
                     const mLeft = Math.floor((diffSeconds % 3600) / 60);
                     const sLeft = diffSeconds % 60;
                     const timeLeft = `${{hLeft.toString().padStart(2, '0')}}:${{mLeft.toString().padStart(2, '0')}}:${{sLeft.toString().padStart(2, '0')}}`;
-                    document.getElementById('next-prayer-text').textContent = `متبقي على ${{nextPrayer.ar}}: ${{timeLeft}}`;
+                    document.getElementById('next-prayer-text').textContent = `متبقي على صلاة ${{nextPrayer.ar}}: ${{timeLeft}}`;
                     document.getElementById('next-prayer-eng').textContent = `Time to ${{nextPrayer.en}}: ${{timeLeft}}`;
                 }} else {{
-                    document.getElementById('next-prayer-text').textContent = `حان وقت ${{nextPrayer.ar}}`;
+                    document.getElementById('next-prayer-text').textContent = `حان وقت صلاة ${{nextPrayer.ar}}`;
                     document.getElementById('next-prayer-eng').textContent = `Time for ${{nextPrayer.en}}`;
                 }}
             }}
