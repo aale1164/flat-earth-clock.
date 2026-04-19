@@ -272,7 +272,6 @@ html_code = f"""
             height: 100%;
             overflow: hidden;
             font-family: 'Tajawal', sans-serif;
-            background-color: black;
         }}
 
         .background-container {{
@@ -283,7 +282,6 @@ html_code = f"""
             height: 100%;
             z-index: -1;
             overflow: hidden;
-            background-color: black;
         }}
 
         .bg-image {{
@@ -544,6 +542,7 @@ html_code = f"""
             </div>
         </div>
 
+        <!-- صف واحد يجمع الطواليع + البرج -->
         <div id="tawalee-container" class="tawalee-container"></div>
 
         <div class="city-card">
@@ -567,6 +566,7 @@ html_code = f"""
             const container = document.getElementById('tawalee-container');
             container.innerHTML = '';
             
+            // إضافة بطاقات الطواليع الثلاث
             tawaleeData.forEach(item => {{
                 const div = document.createElement('div');
                 div.className = 'tawalee-item';
@@ -578,6 +578,7 @@ html_code = f"""
                 container.appendChild(div);
             }});
             
+            // إضافة بطاقة البرج كالبطاقة الرابعة
             const zodiacDiv = document.createElement('div');
             zodiacDiv.className = 'zodiac-item';
             zodiacDiv.innerHTML = `
