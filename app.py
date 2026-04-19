@@ -1,28 +1,27 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import pytz
 from datetime import datetime, date, timedelta
-import time
 import requests
 from hijri_converter import Gregorian
+import json
 
-# إعداد الصفحة (يجب أن يكون في بداية الكود دائماً)
+# إعداد الصفحة
 st.set_page_config(page_title="ساعة الأرض - aale1164", layout="wide")
 
-# محاولة استيراد مكتبة أوقات الصلاة بشكل آمن
+# محاولة استيراد المكتبات الاختيارية
 try:
     from prayer_times_calculator import PrayerTimesCalculator
     PRAYER_LIB_AVAILABLE = True
 except ImportError:
     PRAYER_LIB_AVAILABLE = False
 
-# محاولة استيراد مكتبة الموقع الجغرافي بشكل آمن
 try:
     from streamlit_js_eval import get_geolocation
     GEO_LIB_AVAILABLE = True
 except ImportError:
     GEO_LIB_AVAILABLE = False
 
-# إعداد المنطقة الزمنية
 sa_tz = pytz.timezone('Asia/Riyadh')
 
 # --- دوال مساعدة ---
@@ -31,31 +30,28 @@ def fetch_weather_cached(lat, lon):
     try:
         url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current_weather=true"
         response = requests.get(url, timeout=5).json()
-        temp = response['current_weather']['temperature']
-        return f"{temp}°C"
-    except Exception:
-        return "--°C"
+        return response['current_weather']['temperature']
+    except:
+        return None
 
 def get_season_data():
     today = date.today()
-    year = today.year
+    y = today.year
     seasons = [
-        ('الربيع', 'Spring', date(year, 3, 21), "🌸"),
-        ('الصيف', 'Summer', date(year, 6, 21), "☀️"),
-        ('الخريف', 'Autumn', date(year, 9, 23), "🍂"),
-        ('الشتاء', 'Winter', date(year, 12, 21), "❄️")
+        ('الربيع', 'Spring', date(y, 3, 21), '🌸'),
+        ('الصيف', 'Summer', date(y, 6, 21), '☀️'),
+        ('الخريف', 'Autumn', date(y, 9, 23), '🍂'),
+        ('الشتاء', 'Winter', date(y, 12, 21), '❄️')
     ]
-    for name_ar, name_en, s_date, icon in seasons:
+    for ar, en, s_date, icon in seasons:
         if s_date > today:
-            return name_ar, name_en, (s_date - today).days, icon
-    
-    next_spring = date(year + 1, 3, 21)
-    return 'الربيع', 'Spring', (next_spring - today).days, "🌸"
+            return ar, en, (s_date - today).days, icon
+    next_spring = date(y + 1, 3, 21)
+    return 'الربيع', 'Spring', (next_spring - today).days, '🌸'
 
 def get_prayer_times(lat, lon, now):
     sunrise = sunset = "--:--"
-    next_p_ar, next_p_en, t_left = "الفجر", "Fajr", "00:00:00"
-    
+    prayer_dict = {}
     if PRAYER_LIB_AVAILABLE:
         try:
             calc = PrayerTimesCalculator(
@@ -66,198 +62,218 @@ def get_prayer_times(lat, lon, now):
             )
             times = calc.fetch_prayer_times()
             if times:
-                sunrise = times.get('Sunrise', "--:--")
-                sunset = times.get('Maghrib', "--:--")
-                
-                prayer_list = [
-                    ('الفجر', 'Fajr', times.get('Fajr')),
-                    ('الظهر', 'Dhuhr', times.get('Dhuhr')),
-                    ('العصر', 'Asr', times.get('Asr')),
-                    ('المغرب', 'Maghrib', times.get('Maghrib')),
-                    ('العشاء', 'Isha', times.get('Isha'))
-                ]
-                
-                curr_time_str = now.strftime("%H:%M")
-                next_day = now.date() + timedelta(days=1)
-                
-                for ar_name, en_name, p_time in prayer_list:
-                    if p_time and p_time > curr_time_str:
-                        next_p_ar = ar_name
-                        next_p_en = en_name
-                        prayer_dt = datetime.strptime(f"{now.date()} {p_time}", "%Y-%m-%d %H:%M")
-                        prayer_dt = sa_tz.localize(prayer_dt)
-                        diff = prayer_dt - now
-                        h, rem = divmod(diff.seconds, 3600)
-                        m, s = divmod(rem, 60)
-                        t_left = f"{h:02d}:{m:02d}:{s:02d}"
-                        break
-                else:
-                    # إذا لم نجد صلاة قادمة اليوم، نعرض صلاة الفجر لليوم التالي
-                    fajr_time = times.get('Fajr')
-                    if fajr_time:
-                        prayer_dt = datetime.strptime(f"{next_day} {fajr_time}", "%Y-%m-%d %H:%M")
-                        prayer_dt = sa_tz.localize(prayer_dt)
-                        diff = prayer_dt - now
-                        h, rem = divmod(diff.seconds, 3600)
-                        m, s = divmod(rem, 60)
-                        t_left = f"{h:02d}:{m:02d}:{s:02d}"
-        except Exception:
+                sunrise = times.get('Sunrise', '--:--')
+                sunset = times.get('Maghrib', '--:--')
+                prayer_dict = {
+                    'Fajr': times.get('Fajr'),
+                    'Dhuhr': times.get('Dhuhr'),
+                    'Asr': times.get('Asr'),
+                    'Maghrib': times.get('Maghrib'),
+                    'Isha': times.get('Isha')
+                }
+        except:
             pass
-    
-    return sunrise, sunset, next_p_ar, next_p_en, t_left
-
-# --- التنسيق البصري (CSS) ---
-st.markdown("""
-<style>
-    header, footer, .stDeployButton, #MainMenu { visibility: hidden !important; height: 0; }
-    .block-container { padding: 0 !important; }
-
-    .stApp {
-        background: url("https://raw.githubusercontent.com/aale1164/flat-earth-clock./main/background.png");
-        background-size: cover;
-        background-position: center;
-        background-attachment: fixed;
-        direction: rtl;
-        font-family: 'Tajawal', sans-serif;
-    }
-
-    .main-layout {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        height: 100vh;
-        justify-content: flex-start;
-        padding-top: 4vh;
-    }
-
-    .unified-text {
-        color: #FFFFFF !important;
-        text-shadow: 2px 2px 10px rgba(0,0,0,0.8); 
-        margin: 0;
-        line-height: 1.2;
-        text-align: center;
-    }
-
-    .time-val { font-size: 14vw; font-weight: 900; }
-    .ampm-val { font-size: 4vw; margin-right: 10px; color: #FFA500; }
-    .info-line { font-size: 4vw; font-weight: 700; margin-top: 5px; }
-    .eng-sub { font-size: 2vw; opacity: 0.8; font-weight: normal; display: block; }
-
-    .data-bar {
-        display: flex;
-        gap: 20px;
-        margin-top: 20px;
-        background: rgba(255, 255, 255, 0.1);
-        padding: 10px 25px;
-        border-radius: 50px;
-        backdrop-filter: blur(8px);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-    }
-    .data-item { font-size: 2.5vw; font-weight: bold; color: #FFFFFF; text-align: center; line-height: 1.4; }
-
-    .social-links { 
-        margin-top: auto; 
-        padding-bottom: 40px; 
-        display: flex; 
-        gap: 15px; 
-    }
-    .social-links a {
-        color: white !important; 
-        text-decoration: none; 
-        font-size: 16px;
-        padding: 10px 25px; 
-        background: rgba(0,0,0,0.5); 
-        border-radius: 50px;
-        border: 1px solid rgba(255,255,255,0.2);
-        transition: 0.3s;
-    }
-</style>
-""", unsafe_allow_html=True)
+    return sunrise, sunset, prayer_dict
 
 # --- الحصول على الإحداثيات ---
-if 'location_initialized' not in st.session_state:
-    st.session_state.location_initialized = False
-    st.session_state.lat = 26.32  # بريدة
-    st.session_state.lon = 43.97
-
-if not st.session_state.location_initialized and GEO_LIB_AVAILABLE:
+lat, lon = 26.32, 43.97
+if GEO_LIB_AVAILABLE:
     try:
-        location = get_geolocation()
-        if location and 'coords' in location:
-            st.session_state.lat = location['coords']['latitude']
-            st.session_state.lon = location['coords']['longitude']
-        st.session_state.location_initialized = True
-    except Exception:
-        st.session_state.location_initialized = True
+        loc = get_geolocation()
+        if loc and 'coords' in loc:
+            lat = loc['coords']['latitude']
+            lon = loc['coords']['longitude']
+    except:
+        pass
 
-lat = st.session_state.lat
-lon = st.session_state.lon
-
-# --- الحصول على البيانات الحالية ---
+# --- تجهيز البيانات ---
 now = datetime.now(sa_tz)
+today = now.date()
 
-# التاريخ الهجري والميلادي
 try:
-    h = Gregorian(now.year, now.month, now.day).to_hijri()
+    h = Gregorian.fromdate(today).to_hijri()
     hij_str = f"{h.day}/{h.month}/{h.year} هـ"
-except Exception:
+except:
     hij_str = "--/--/---- هـ"
-mil_str = f"{now.day}/{now.month}/{now.year} M"
+mil_str = f"{today.day}/{today.month}/{today.year} M"
 
-# الطقس
-weather_data = fetch_weather_cached(lat, lon)
+temp = fetch_weather_cached(lat, lon)
+weather_str = f"{temp}°C" if temp is not None else "--°C"
 
-# أوقات الصلاة
-sunrise, sunset, next_p_ar, next_p_en, t_left = get_prayer_times(lat, lon, now)
+sunrise, sunset, prayer_dict = get_prayer_times(lat, lon, now)
 
-# الفصل
 season_ar, season_en, days_left, season_icon = get_season_data()
 
-# تنسيق الوقت
-hour_12 = now.strftime('%I').lstrip('0') or "12"
-min_sec = now.strftime(':%M:%S')
-raw_time = f"{hour_12}{min_sec}"
-ampm_ar = "م" if now.hour >= 12 else "ص"
-ampm_en = now.strftime('%p')
+# تمرير البيانات إلى JavaScript
+prayer_json = json.dumps(prayer_dict, ensure_ascii=False)
 
-# --- عرض الواجهة ---
-placeholder = st.empty()
+# --- واجهة HTML + CSS + JavaScript مستقلة ---
+html_code = f"""
+<!DOCTYPE html>
+<html dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body {{
+            margin: 0;
+            padding: 0;
+            font-family: 'Tajawal', sans-serif;
+            background: url("https://raw.githubusercontent.com/aale1164/flat-earth-clock./main/background.png");
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding-top: 4vh;
+            box-sizing: border-box;
+        }}
+        .unified-text {{
+            color: #FFFFFF;
+            text-shadow: 2px 2px 10px rgba(0,0,0,0.8);
+            margin: 0;
+            line-height: 1.2;
+            text-align: center;
+        }}
+        .time-val {{ font-size: 14vw; font-weight: 900; }}
+        .ampm-val {{ font-size: 4vw; margin-right: 10px; color: #FFA500; }}
+        .info-line {{ font-size: 4vw; font-weight: 700; margin-top: 5px; }}
+        .eng-sub {{ font-size: 2vw; opacity: 0.8; font-weight: normal; display: block; }}
+        .data-bar {{
+            display: flex;
+            gap: 20px;
+            margin-top: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px 25px;
+            border-radius: 50px;
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }}
+        .data-item {{ font-size: 2.5vw; font-weight: bold; color: #FFFFFF; text-align: center; line-height: 1.4; }}
+        .social-links {{ margin-top: auto; padding-bottom: 40px; display: flex; gap: 15px; }}
+        .social-links a {{
+            color: white; text-decoration: none; font-size: 16px;
+            padding: 10px 25px; background: rgba(0,0,0,0.5); border-radius: 50px;
+            border: 1px solid rgba(255,255,255,0.2); transition: 0.3s;
+        }}
+        .social-links a:hover {{ background: rgba(255,255,255,0.2); }}
+    </style>
+</head>
+<body>
+    <div class="unified-text time-val">
+        <span id="live-time">--:--:--</span>
+        <span id="live-ampm" class="ampm-val"></span>
+    </div>
 
-with placeholder.container():
-    html_content = f"""
-        <div class='main-layout'>
-            <div class='unified-text time-val'>
-                {raw_time}<span class='ampm-val'>{ampm_ar} / {ampm_en}</span>
-            </div>
+    <div class="unified-text info-line">{hij_str} | {mil_str}</div>
+
+    <div class="unified-text info-line" style="color:#00FF00; margin-top:10px;">
+        <span id="next-prayer-text">متبقي على --: --:--:--</span>
+        <span class="eng-sub" id="next-prayer-eng">Time to --: --:--:--</span>
+    </div>
+
+    <div class="data-bar">
+        <div class="data-item">🌡️ {weather_str}<br><span style="font-size:1.5vw; font-weight:normal;">Temp</span></div>
+        <div class="data-item">☀️ الشروق: {sunrise}<br><span style="font-size:1.5vw; font-weight:normal;">Sunrise</span></div>
+        <div class="data-item">🌅 الغروب: {sunset}<br><span style="font-size:1.5vw; font-weight:normal;">Sunset</span></div>
+    </div>
+
+    <div class="unified-text info-line" style="margin-top:25px;">
+        {season_icon} متبقي على {season_ar}: {days_left} يوم
+        <span class="eng-sub">{days_left} days left for {season_en}</span>
+    </div>
+
+    <div class="social-links">
+        <a href="https://twitter.com/aale1164" target="_blank">𝕏 @aale1164</a>
+        <a href="https://www.snapchat.com/add/aale112" target="_blank">👻 aale112</a>
+    </div>
+
+    <script>
+        const prayerTimes = {prayer_json};
+        const timezone = "Asia/Riyadh";
+
+        function updateClock() {{
+            const now = new Date();
             
-            <div class='unified-text info-line'>
-                {hij_str} | {mil_str}
-            </div>
+            // تحويل إلى توقيت الرياض
+            const options = {{ timeZone: timezone, hour12: false }};
+            const formatter = new Intl.DateTimeFormat('en-US', options);
+            const parts = formatter.formatToParts(now);
+            const dateParts = {{}};
+            parts.forEach(p => {{ dateParts[p.type] = p.value; }});
             
-            <div class='unified-text info-line' style='color:#00FF00; margin-top:10px;'>
-                متبقي على {next_p_ar}: {t_left}
-                <span class='eng-sub'>Time to {next_p_en}: {t_left}</span>
-            </div>
+            const year = parseInt(dateParts.year);
+            const month = parseInt(dateParts.month) - 1;
+            const day = parseInt(dateParts.day);
+            const hour = parseInt(dateParts.hour);
+            const minute = parseInt(dateParts.minute);
+            const second = parseInt(dateParts.second);
+            
+            // عرض الوقت بصيغة 12 ساعة
+            let hour12 = hour % 12;
+            hour12 = hour12 === 0 ? 12 : hour12;
+            const ampmAr = hour >= 12 ? 'م' : 'ص';
+            const ampmEn = hour >= 12 ? 'PM' : 'AM';
+            const timeStr = `${{hour12}}:${{minute.toString().padStart(2,'0')}}:${{second.toString().padStart(2,'0')}}`;
+            document.getElementById('live-time').textContent = timeStr;
+            document.getElementById('live-ampm').textContent = `${{ampmAr}} / ${{ampmEn}}`;
+            
+            // حساب الصلاة القادمة
+            const prayers = [
+                {{ nameAr: 'الفجر', nameEn: 'Fajr', time: prayerTimes.Fajr }},
+                {{ nameAr: 'الظهر', nameEn: 'Dhuhr', time: prayerTimes.Dhuhr }},
+                {{ nameAr: 'العصر', nameEn: 'Asr', time: prayerTimes.Asr }},
+                {{ nameAr: 'المغرب', nameEn: 'Maghrib', time: prayerTimes.Maghrib }},
+                {{ nameAr: 'العشاء', nameEn: 'Isha', time: prayerTimes.Isha }}
+            ];
+            
+            const currentTimeStr = `${{hour.toString().padStart(2,'0')}}:${{minute.toString().padStart(2,'0')}}`;
+            let nextPrayer = null;
+            
+            for (let p of prayers) {{
+                if (p.time && p.time > currentTimeStr) {{
+                    nextPrayer = p;
+                    break;
+                }}
+            }}
+            
+            if (!nextPrayer) {{
+                nextPrayer = prayers[0]; // الفجر
+            }}
+            
+            if (nextPrayer && nextPrayer.time) {{
+                const [pHour, pMinute] = nextPrayer.time.split(':').map(Number);
+                let prayerDate = new Date(year, month, day, pHour, pMinute, 0);
+                
+                if (nextPrayer === prayers[0] && currentTimeStr >= (prayers[prayers.length-1].time || "23:59")) {{
+                    prayerDate.setDate(prayerDate.getDate() + 1);
+                }}
+                
+                const diffMs = prayerDate - now;
+                if (diffMs > 0) {{
+                    const diffSec = Math.floor(diffMs / 1000);
+                    const hLeft = Math.floor(diffSec / 3600);
+                    const mLeft = Math.floor((diffSec % 3600) / 60);
+                    const sLeft = diffSec % 60;
+                    const timeLeft = `${{hLeft.toString().padStart(2,'0')}}:${{mLeft.toString().padStart(2,'0')}}:${{sLeft.toString().padStart(2,'0')}}`;
+                    
+                    document.getElementById('next-prayer-text').textContent = `متبقي على ${{nextPrayer.nameAr}}: ${{timeLeft}}`;
+                    document.getElementById('next-prayer-eng').textContent = `Time to ${{nextPrayer.nameEn}}: ${{timeLeft}}`;
+                }} else {{
+                    document.getElementById('next-prayer-text').textContent = `حان وقت ${{nextPrayer.nameAr}}`;
+                    document.getElementById('next-prayer-eng').textContent = `Time for ${{nextPrayer.nameEn}}`;
+                }}
+            }}
+        }}
 
-            <div class='data-bar'>
-                <div class='data-item'>🌡️ {weather_data}<br><span style='font-size:1.5vw; font-weight:normal;'>Temp</span></div>
-                <div class='data-item'>☀️ الشروق: {sunrise}<br><span style='font-size:1.5vw; font-weight:normal;'>Sunrise</span></div>
-                <div class='data-item'>🌅 الغروب: {sunset}<br><span style='font-size:1.5vw; font-weight:normal;'>Sunset</span></div>
-            </div>
+        updateClock();
+        setInterval(updateClock, 1000);
+    </script>
+</body>
+</html>
+"""
 
-            <div class='unified-text info-line' style='margin-top:25px;'>
-                {season_icon} متبقي على {season_ar}: {days_left} يوم
-                <span class='eng-sub'>{days_left} days left for {season_en}</span>
-            </div>
-
-            <div class='social-links'>
-                <a href='https://twitter.com/aale1164' target='_blank'>𝕏 @aale1164</a>
-                <a href='https://www.snapchat.com/add/aale112' target='_blank'>👻 aale112</a>
-            </div>
-        </div>
-    """
-    st.markdown(html_content, unsafe_allow_html=True)
-
-# --- تحديث تلقائي كل 60 ثانية ---
-time.sleep(60)
-st.rerun()
+# --- عرض المكون ---
+components.html(html_code, height=1000, scrolling=False)
