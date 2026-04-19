@@ -74,7 +74,7 @@ if 'lat' not in st.session_state:
     st.session_state.lat, st.session_state.lon = 26.32, 43.97
     st.session_state.location_checked = False
 
-# --- صفحة طلب إذن الموقع ---
+# --- صفحة طلب إذن الموقع (مع النص الجديد) ---
 if not st.session_state.location_checked and GEO_LIB_AVAILABLE:
     st.markdown("""
     <style>
@@ -94,7 +94,9 @@ if not st.session_state.location_checked and GEO_LIB_AVAILABLE:
     <div class="permission-box">
         <h1>🌍 أهلاً بك</h1>
         <p style="font-size: 18px;">هذا التطبيق إصدار تجريبي ونستقبل مقترحاتكم</p>
-        <p style="font-size: 16px; margin-top: 10px;">للحصول على مواقيت الصلاة والطقس بدقة، نرجو الموافقة على مشاركة موقعك.</p>
+        <p style="font-size: 16px; margin-top: 5px;">أخوكم / عدناني</p>
+        <p style="font-size: 14px; margin-top: 20px; opacity: 0.8;">هذا التصميم مسجل في الهيئة الملكية الفكرية وأي محاولة لاستنساخه سوف تعرضك للمسائلة القانونية</p>
+        <p style="font-size: 16px; margin-top: 20px;">للحصول على مواقيت الصلاة والطقس بدقة، نرجو الموافقة على مشاركة موقعك.</p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -161,7 +163,7 @@ season_ar, season_en, days_left, season_icon = get_season_data()
 
 prayer_json = json.dumps(prayer_dict, ensure_ascii=False)
 
-# --- HTML + CSS + JavaScript (تصميم جديد بعمودين) ---
+# --- HTML + CSS + JavaScript (تصميم محسّن مع صندوقين شفافين جداً) ---
 html_code = f"""
 <!DOCTYPE html>
 <html dir="rtl">
@@ -185,14 +187,14 @@ html_code = f"""
         .unified-text {{
             text-shadow: 2px 2px 12px rgba(0,0,0,0.7); text-align: center; margin: 0; line-height: 1.3;
         }}
-        .time-display {{ font-size: clamp(4rem, 18vw, 8rem); font-weight: 900; line-height: 1; }}
-        .ampm-display {{ font-size: clamp(1.2rem, 6vw, 2.5rem); margin-right: 8px; color: #FFD966; }}
+        .time-display {{ font-size: clamp(3.8rem, 16vw, 7rem); font-weight: 900; line-height: 1; }}
+        .ampm-display {{ font-size: clamp(1.1rem, 5vw, 2.2rem); margin-right: 8px; color: #FFD966; }}
         
         .prayer-line {{
-            font-size: clamp(1.2rem, 5.5vw, 2.2rem); font-weight: 700; margin-top: 12px; color: #B5FFB5;
+            font-size: clamp(1.1rem, 5vw, 2rem); font-weight: 700; margin-top: 10px; color: #B5FFB5;
         }}
         .eng-sub {{
-            font-size: clamp(0.9rem, 3.5vw, 1.3rem); opacity: 0.8; font-weight: 400;
+            font-size: clamp(0.8rem, 3.2vw, 1.2rem); opacity: 0.8; font-weight: 400;
             display: block; margin-top: 2px;
         }}
 
@@ -201,53 +203,56 @@ html_code = f"""
             display: flex;
             flex-direction: row;
             justify-content: space-around;
-            align-items: center;
+            align-items: stretch;
             width: 100%;
-            margin-top: 25px;
-            gap: 10px;
+            margin-top: 20px;
+            gap: 12px;
         }}
 
-        /* العمود الأيمن (اليوم والتاريخ) */
-        .right-col {{
+        /* نمط موحد للصندوقين */
+        .info-box {{
             flex: 1;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             text-align: center;
+            background: rgba(0, 0, 0, 0.15); /* شفافية عالية جداً */
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 30px;
+            padding: 14px 6px;
         }}
-        .day-ar {{ font-size: clamp(1.8rem, 7vw, 2.8rem); font-weight: 900; opacity: 0.95; }}
-        .day-en {{ font-size: clamp(1rem, 4.5vw, 1.8rem); opacity: 0.8; margin-top: 2px; }}
-        .hijri-date {{ font-size: clamp(1.2rem, 5vw, 2rem); font-weight: 700; margin-top: 12px; opacity: 0.9; }}
-        .miladi-date {{ font-size: clamp(1rem, 4.5vw, 1.6rem); opacity: 0.8; margin-top: 4px; }}
 
-        /* العمود الأيسر (الطقس والشروق والغروب) */
-        .left-col {{
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            background: rgba(20, 20, 20, 0.25);
-            padding: 14px 10px;
-            border-radius: 40px;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }}
+        /* العمود الأيمن: اليوم والتواريخ */
+        .day-ar {{ font-size: clamp(1.5rem, 6vw, 2.4rem); font-weight: 900; opacity: 0.95; }}
+        .day-en {{ font-size: clamp(0.9rem, 4vw, 1.5rem); opacity: 0.8; margin-top: 2px; }}
+        .hijri-date {{ font-size: clamp(1rem, 4.5vw, 1.8rem); font-weight: 700; margin-top: 10px; opacity: 0.9; }}
+        .miladi-date {{ font-size: clamp(0.9rem, 4vw, 1.4rem); opacity: 0.8; margin-top: 3px; }}
+
+        /* العمود الأيسر: الطقس والشروق والغروب */
         .weather-item {{
-            font-size: clamp(1.2rem, 5vw, 2rem); font-weight: bold; opacity: 0.95;
-            margin: 5px 0;
+            margin: 6px 0;
+            width: 100%;
+        }}
+        .weather-title {{
+            font-size: clamp(1rem, 4.5vw, 1.6rem); font-weight: bold; opacity: 0.95;
+        }}
+        .weather-value {{
+            font-size: clamp(0.9rem, 4vw, 1.4rem); font-weight: normal; opacity: 0.9;
+            margin-top: 2px;
         }}
         .weather-label {{
-            font-size: clamp(0.8rem, 3.5vw, 1.2rem); opacity: 0.7; display: block;
+            font-size: clamp(0.7rem, 3vw, 1rem); opacity: 0.65; display: block;
+            margin-top: 2px;
         }}
 
         /* سطر الفصل */
         .season-line {{
-            font-size: clamp(1.2rem, 5.5vw, 2.2rem); font-weight: 700; margin-top: 30px; opacity: 0.9;
+            font-size: clamp(1.1rem, 5vw, 2rem); font-weight: 700; margin-top: 25px; opacity: 0.9;
         }}
         .season-sub {{
-            font-size: clamp(0.9rem, 3.8vw, 1.4rem); opacity: 0.75; font-weight: normal; display: block;
+            font-size: clamp(0.8rem, 3.5vw, 1.2rem); opacity: 0.75; font-weight: normal; display: block;
         }}
 
         /* روابط التواصل */
@@ -256,8 +261,8 @@ html_code = f"""
             flex-wrap: wrap; justify-content: center;
         }}
         .social-footer a {{
-            color: white; text-decoration: none; font-size: clamp(0.9rem, 3.5vw, 1.2rem);
-            font-weight: bold; padding: 12px 24px; background: rgba(0,0,0,0.5);
+            color: white; text-decoration: none; font-size: clamp(0.8rem, 3.5vw, 1.1rem);
+            font-weight: bold; padding: 10px 20px; background: rgba(0,0,0,0.5);
             border-radius: 50px; border: 1px solid rgba(255,255,255,0.25);
             backdrop-filter: blur(5px); transition: all 0.2s ease; opacity: 0.95;
             display: inline-block;
@@ -266,8 +271,8 @@ html_code = f"""
 
         @media (max-width: 480px) {{
             body {{ padding: 3vh 12px 0 12px; }}
-            .info-row {{ gap: 6px; }}
-            .left-col {{ padding: 10px 6px; }}
+            .info-row {{ gap: 8px; }}
+            .info-box {{ padding: 12px 4px; }}
         }}
     </style>
 </head>
@@ -285,21 +290,32 @@ html_code = f"""
             <span class="eng-sub" id="next-prayer-eng">Time to --: --:--:--</span>
         </div>
 
-        <!-- الصف ذو العمودين (يمين: اليوم والتاريخ، يسار: الطقس والشروق والغروب) -->
+        <!-- الصف ذو العمودين (كلاهما داخل صندوق شفاف) -->
         <div class="info-row">
-            <!-- العمود الأيمن -->
-            <div class="right-col">
+            <!-- العمود الأيمن: اليوم والتاريخ -->
+            <div class="info-box">
                 <div class="day-ar">{day_ar}</div>
                 <div class="day-en">{day_en}</div>
                 <div class="hijri-date">{hij_str}</div>
                 <div class="miladi-date">{mil_str}</div>
             </div>
 
-            <!-- العمود الأيسر (صندوق شفاف) -->
-            <div class="left-col">
-                <div class="weather-item">🌡️ {weather_str}<span class="weather-label">Temp</span></div>
-                <div class="weather-item">☀️ الشروق: {sunrise}<span class="weather-label">Sunrise</span></div>
-                <div class="weather-item">🌅 الغروب: {sunset}<span class="weather-label">Sunset</span></div>
+            <!-- العمود الأيسر: الطقس والشروق والغروب -->
+            <div class="info-box">
+                <div class="weather-item">
+                    <div class="weather-title">🌡️ {weather_str}</div>
+                    <div class="weather-label">Temp</div>
+                </div>
+                <div class="weather-item">
+                    <div class="weather-title">☀️ الشروق</div>
+                    <div class="weather-value">{sunrise}</div>
+                    <div class="weather-label">Sunrise</div>
+                </div>
+                <div class="weather-item">
+                    <div class="weather-title">🌅 الغروب</div>
+                    <div class="weather-value">{sunset}</div>
+                    <div class="weather-label">Sunset</div>
+                </div>
             </div>
         </div>
 
