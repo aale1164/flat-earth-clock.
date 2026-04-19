@@ -1,6 +1,6 @@
 import streamlit as st
 import pytz
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 import time
 import requests
 from hijri_converter import Gregorian
@@ -25,8 +25,9 @@ except ImportError:
 # إعداد المنطقة الزمنية
 sa_tz = pytz.timezone('Asia/Riyadh')
 
-# --- دوال المساعدة للطقس والفصول ---
-def fetch_weather(lat, lon):
+# --- دوال مساعدة ---
+@st.cache_data(ttl=600)  # تحديث الطقس كل 10 دقائق
+def fetch_weather_cached(lat, lon):
     try:
         url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current_weather=true"
         response = requests.get(url, timeout=5).json()
@@ -47,15 +48,71 @@ def get_season_data():
     for name, s_date, icon in seasons:
         if s_date > today:
             return name, (s_date - today).days, icon
-            
-    # إذا تجاوزنا 21 ديسمبر، نحسب للربيع القادم
+
     next_spring = date(year + 1, 3, 21)
     return "الربيع / Spring", (next_spring - today).days, "🌸"
+
+def get_prayer_times(lat, lon, now):
+    """إرجاع أوقات الصلاة لهذا اليوم مع تحديد الصلاة القادمة"""
+    sunrise = sunset = "--:--"
+    next_p_ar = next_p_en = "الفجر"
+    t_left = "00:00:00"
+    
+    if PRAYER_LIB_AVAILABLE:
+        try:
+            calc = PrayerTimesCalculator(
+                latitude=lat,
+                longitude=lon,
+                calculation_method='makkah',
+                date=now.strftime("%Y-%m-%d")
+            )
+            times = calc.fetch_prayer_times()
+            if times:
+                sunrise = times.get('Sunrise', "--:--")
+                sunset = times.get('Maghrib', "--:--")
+                
+                prayer_list = [
+                    ('الفجر', 'Fajr', times.get('Fajr')),
+                    ('الظهر', 'Dhuhr', times.get('Dhuhr')),
+                    ('العصر', 'Asr', times.get('Asr')),
+                    ('المغرب', 'Maghrib', times.get('Maghrib')),
+                    ('العشاء', 'Isha', times.get('Isha'))
+                ]
+                
+                curr_time_str = now.strftime("%H:%M")
+                next_day = now.date() + timedelta(days=1)
+                
+                for ar_name, en_name, p_time in prayer_list:
+                    if p_time and p_time > curr_time_str:
+                        next_p_ar = ar_name
+                        next_p_en = en_name
+                        # تحويل وقت الصلاة إلى datetime كامل
+                        prayer_dt = datetime.strptime(f"{now.date()} {p_time}", "%Y-%m-%d %H:%M")
+                        prayer_dt = sa_tz.localize(prayer_dt)
+                        diff = prayer_dt - now
+                        h, rem = divmod(diff.seconds, 3600)
+                        m, s = divmod(rem, 60)
+                        t_left = f"{h:02d}:{m:02d}:{s:02d}"
+                        break
+                else:
+                    # إذا لم نجد صلاة قادمة اليوم، نعرض صلاة الفجر لليوم التالي
+                    next_p_ar, next_p_en = "الفجر", "Fajr"
+                    fajr_tomorrow = times.get('Fajr')
+                    if fajr_tomorrow:
+                        prayer_dt = datetime.strptime(f"{next_day} {fajr_tomorrow}", "%Y-%m-%d %H:%M")
+                        prayer_dt = sa_tz.localize(prayer_dt)
+                        diff = prayer_dt - now
+                        h, rem = divmod(diff.seconds, 3600)
+                        m, s = divmod(rem, 60)
+                        t_left = f"{h:02d}:{m:02d}:{s:02d}"
+        except Exception as e:
+            pass  # يمكن إضافة تسجيل للخطأ إذا لزم
+    
+    return sunrise, sunset, next_p_ar, next_p_en, t_left
 
 # --- التنسيق البصري (CSS) ---
 st.markdown("""
 <style>
-    /* إخفاء شريط الأدوات الافتراضي */
     header, footer, .stDeployButton, #MainMenu { visibility: hidden !important; height: 0; }
     .block-container { padding: 0 !important; }
 
@@ -120,113 +177,90 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- إعدادات الموقع والطقس ---
-lat, lon = 26.32, 43.97 # إحداثيات افتراضية لمدينة بريدة
+# --- الحصول على الموقع الجغرافي (مرة واحدة) ---
+if 'location_initialized' not in st.session_state:
+    st.session_state.location_initialized = False
+    st.session_state.lat = 26.32  # بريدة
+    st.session_state.lon = 43.97
 
-if GEO_LIB_AVAILABLE:
-    location = get_geolocation()
-    if location and 'coords' in location:
-        lat = location['coords']['latitude']
-        lon = location['coords']['longitude']
+if not st.session_state.location_initialized and GEO_LIB_AVAILABLE:
+    try:
+        location = get_geolocation()
+        if location and 'coords' in location:
+            st.session_state.lat = location['coords']['latitude']
+            st.session_state.lon = location['coords']['longitude']
+        st.session_state.location_initialized = True
+    except Exception:
+        st.session_state.location_initialized = True  # نستخدم الإحداثيات الافتراضية
 
-if 'weather_data' not in st.session_state:
-    st.session_state.weather_data = fetch_weather(lat, lon)
+lat = st.session_state.lat
+lon = st.session_state.lon
 
-# --- حاوية العرض المتجددة ---
+# --- جلب الطقس (مع تخزين مؤقت) ---
+weather_data = fetch_weather_cached(lat, lon)
+
+# --- حساب البيانات الحالية ---
+now = datetime.now(sa_tz)
+
+# التاريخ الهجري والميلادي
+try:
+    h = Gregorian(now.year, now.month, now.day).to_hijri()
+    hij_str = f"{h.day}/{h.month}/{h.year} هـ"
+except Exception:
+    hij_str = "--/--/---- هـ"
+mil_str = f"{now.day}/{now.month}/{now.year} M"
+
+# أوقات الصلاة والصلاة القادمة
+sunrise, sunset, next_p_ar, next_p_en, t_left = get_prayer_times(lat, lon, now)
+
+# بيانات الفصل
+season_name, season_days, season_icon = get_season_data()
+
+# تنسيق الوقت الحالي
+hour_12 = now.strftime('%I').lstrip('0') or "12"  # إزالة الصفر البادئ مع مراعاة الساعة 12
+min_sec = now.strftime(':%M:%S')
+raw_time = f"{hour_12}{min_sec}"
+ampm_ar = "م" if now.hour >= 12 else "ص"
+ampm_en = now.strftime('%p')
+
+# --- واجهة العرض ---
 placeholder = st.empty()
 
-# --- حلقة التحديث المستمر ---
-while True:
-    now = datetime.now(sa_tz)
-    
-    # حساب التاريخ
-    try:
-        h = Gregorian(now.year, now.month, now.day).to_hijri()
-        hij_str = f"{h.day}/{h.month}/{h.year} هـ"
-    except Exception:
-        hij_str = "--/--/---- هـ"
-        
-    mil_str = f"{now.day}/{now.month}/{now.year} M"
-    
-    # قيم أوقات الصلاة الافتراضية
-    sunrise, sunset = "--:--", "--:--"
-    next_p_ar, next_p_en, t_left = "الفجر", "Fajr", "00:00:00"
-    
-    if PRAYER_LIB_AVAILABLE:
-        try:
-            calc = PrayerTimesCalculator(latitude=lat, longitude=lon, calculation_method='makkah', date=now.strftime("%Y-%m-%d"))
-            times = calc.fetch_prayer_times()
-            if times:
-                sunrise = times.get('Sunrise', "--:--")
-                sunset = times.get('Maghrib', "--:--")
-                
-                prayer_list = [
-                    ('الفجر', 'Fajr', times.get('Fajr')), 
-                    ('الظهر', 'Dhuhr', times.get('Dhuhr')), 
-                    ('العصر', 'Asr', times.get('Asr')), 
-                    ('المغرب', 'Maghrib', times.get('Maghrib')), 
-                    ('العشاء', 'Isha', times.get('Isha'))
-                ]
-                
-                curr_time_str = now.strftime("%H:%M:%S")
-                
-                for ar_name, en_name, p_time in prayer_list:
-                    if p_time and f"{p_time}:00" > curr_time_str:
-                        next_p_ar = ar_name
-                        next_p_en = en_name
-                        target_dt = sa_tz.localize(datetime.strptime(f"{p_time}:00", "%H:%M:%S").replace(year=now.year, month=now.month, day=now.day))
-                        diff = target_dt - now
-                        h_v, rem = divmod(diff.seconds, 3600)
-                        m_v, s_v = divmod(rem, 60)
-                        t_left = f"{h_v:02d}:{m_v:02d}:{s_v:02d}"
-                        break
-        except Exception:
-            pass
-
-    # حساب الفصل الحالي
-    season_name, season_days, season_icon = get_season_data()
-
-    # تحديث الواجهة
-    with placeholder.container():
-        raw_time = now.strftime('%I:%M:%S')
-        if raw_time.startswith('0'): 
-            raw_time = raw_time[1:]
-            
-        ampm_ar = "م" if now.strftime('%p') == "PM" else "ص"
-        ampm_en = now.strftime('%p')
-
-        html_content = f"""
-            <div class='main-layout'>
-                <div class='unified-text time-val'>
-                    {raw_time}<span class='ampm-val'>{ampm_ar} / {ampm_en}</span>
-                </div>
-                
-                <div class='unified-text info-line'>
-                    {hij_str} | {mil_str}
-                </div>
-                
-                <div class='unified-text info-line' style='color:#00FF00; margin-top:10px;'>
-                    متبقي على {next_p_ar}: {t_left}
-                    <span class='eng-sub'>Time to {next_p_en}: {t_left}</span>
-                </div>
-
-                <div class='data-bar'>
-                    <div class='data-item'>🌡️ {st.session_state.weather_data}<br><span style='font-size:1.5vw; font-weight:normal;'>Temp</span></div>
-                    <div class='data-item'>☀️ الشروق: {sunrise}<br><span style='font-size:1.5vw; font-weight:normal;'>Sunrise</span></div>
-                    <div class='data-item'>🌅 الغروب: {sunset}<br><span style='font-size:1.5vw; font-weight:normal;'>Sunset</span></div>
-                </div>
-
-                <div class='unified-text info-line' style='margin-top:25px;'>
-                    {season_icon} متبقي على {season_name.split(' / ')[0]}: {season_days} يوم
-                    <span class='eng-sub'>{season_days} days left for {season_name.split(' / ')[1]}</span>
-                </div>
-
-                <div class='social-links'>
-                    <a href='https://twitter.com/aale1164' target='_blank'>𝕏 @aale1164</a>
-                    <a href='https://www.snapchat.com/add/aale112' target='_blank'>👻 aale112</a>
-                </div>
+with placeholder.container():
+    html_content = f"""
+        <div class='main-layout'>
+            <div class='unified-text time-val'>
+                {raw_time}<span class='ampm-val'>{ampm_ar} / {ampm_en}</span>
             </div>
-        """
-        st.markdown(html_content, unsafe_allow_html=True)
+            
+            <div class='unified-text info-line'>
+                {hij_str} | {mil_str}
+            </div>
+            
+            <div class='unified-text info-line' style='color:#00FF00; margin-top:10px;'>
+                متبقي على {next_p_ar}: {t_left}
+                <span class='eng-sub'>Time to {next_p_en}: {t_left}</span>
+            </div>
 
-    time.sleep(1)
+            <div class='data-bar'>
+                <div class='data-item'>🌡️ {weather_data}<br><span style='font-size:1.5vw; font-weight:normal;'>Temp</span></div>
+                <div class='data-item'>☀️ الشروق: {sunrise}<br><span style='font-size:1.5vw; font-weight:normal;'>Sunrise</span></div>
+                <div class='data-item'>🌅 الغروب: {sunset}<br><span style='font-size:1.5vw; font-weight:normal;'>Sunset</span></div>
+            </div>
+
+            <div class='unified-text info-line' style='margin-top:25px;'>
+                {season_icon} متبقي على {season_name.split(' / ')[0]}: {season_days} يوم
+                <span class='eng-sub'>{season_days} days left for {season_name.split(' / ')[1]}</span>
+            </div>
+
+            <div class='social-links'>
+                <a href='https://twitter.com/aale1164' target='_blank'>𝕏 @aale1164</a>
+                <a href='https://www.snapchat.com/add/aale112' target='_blank'>👻 aale112</a>
+            </div>
+        </div>
+    """
+    st.markdown(html_content, unsafe_allow_html=True)
+
+# --- آلية التحديث التلقائي كل ثانية ---
+time.sleep(1)
+st.rerun()
